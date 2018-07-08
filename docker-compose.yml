@@ -1,0 +1,22 @@
+version: '3.1'
+
+services:
+
+  postgres:
+    image: postgres:9.6-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: cluster_tasks
+      PGDATA: /data/postgres
+    ports:
+      - 5432:5432
+
+  pgadmin:
+    image: zhajor/docker-phppgadmin
+    ports:
+      - 80:80
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+

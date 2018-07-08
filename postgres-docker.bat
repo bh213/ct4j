@@ -1,0 +1,1 @@
+ docker run  --platform=linux -e POSTGRES_USER=postgres -e POSTGRES_DB=cluster_tasks -e PGDATA=/data/postgres postgres:9.6-alpine
