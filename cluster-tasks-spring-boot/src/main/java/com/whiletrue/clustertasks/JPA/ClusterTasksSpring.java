@@ -52,6 +52,4 @@ public class ClusterTasksSpring  {
         taskManager = new StdTaskManager(clusterTaskPersistence,  taskFactory, scheduler);
         return taskManager;
     }
-
-
 }

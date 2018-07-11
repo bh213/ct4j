@@ -31,7 +31,6 @@ public class TestScheduler {
     protected Scheduler scheduler;
     protected TaskRunner taskRunner;
 
-
     @BeforeEach
     void init() {
         clusterInstance = Mockito.mock(ClusterInstance.class);
@@ -46,8 +45,6 @@ public class TestScheduler {
         scheduler = new Scheduler(taskPersistence,taskRunner, clusterTasksConfig);
     }
 
-
-
     @Test
     @DisplayName("test resource estimate")
     public void testFreeTasksSlots() {
@@ -57,11 +54,4 @@ public class TestScheduler {
         assertThat(scheduler.getFreeResourcesEstimate().getCpuCoreUsage()).isEqualTo(77);
         assertThat(scheduler.getFreeResourcesEstimate().getMaximumMemoryUsageInMb()).isEqualTo(78);
     }
-
-
-
-
-
-
-
 }

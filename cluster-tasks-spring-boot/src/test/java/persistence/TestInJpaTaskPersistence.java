@@ -61,7 +61,5 @@ public class TestInJpaTaskPersistence extends TestPersistenceBase {
             SpringApplication.run(TestApp.class, args);
         }
     }
-
-
 }
 

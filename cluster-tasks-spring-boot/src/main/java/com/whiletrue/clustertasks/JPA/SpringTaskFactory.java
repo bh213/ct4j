@@ -17,8 +17,6 @@ public class SpringTaskFactory extends TaskFactoryBase implements ApplicationCon
     private static Logger log = LoggerFactory.getLogger(StdTaskRunner.class);
     private ApplicationContext applicationContext;
 
-
-
     @Autowired
     public SpringTaskFactory(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;

@@ -1,6 +1,5 @@
 package TaskManager;
 
-
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.DefaultConstructorTaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
@@ -21,7 +20,6 @@ import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
-
 
 @DisplayName("Scheduler tests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -51,9 +49,6 @@ public class TestTaskManager {
         taskManager = new StdTaskManager(taskPersistence, taskFactory, scheduler);
     }
 
-
-
-
     @Test
     @DisplayName("test example task")
     public void testExampleTask() throws Exception {
@@ -69,12 +64,4 @@ public class TestTaskManager {
                 .isEqualTo(TaskStatus.Success);
 
     }
-
-
-
-
-
-
-
-
 }

@@ -22,8 +22,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     private ClusterTasksConfig clusterTasksConfig;
     private TimeProvider timeProvider;
 
-
-
     public InMemoryTaskPersistence(ClusterInstance clusterInstance, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
         this.clusterInstance = clusterInstance;
         this.taskFactory = taskFactory;
@@ -83,7 +81,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
             }
         }
         return claimed;
-
     }
 
     @Override
@@ -100,7 +97,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     public <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds) throws Exception {
         return doQueueTask(task, input, startDelayInMilliseconds, null);
     }
-
 
     @Override
     public synchronized <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, int priority) throws Exception {
@@ -163,7 +159,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
                 removeTask(entry);
                 waitingTasks.add(entry);
             }
-
         }
     }
 
@@ -176,7 +171,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
         entry.startTime = null;
         removeTask(entry);
         waitingTasks.add(entry);
-
     }
 
     @Override
@@ -191,7 +185,6 @@ public class InMemoryTaskPersistence implements TaskPersistence {
         final TaskEntry entry = findTask(Objects.requireNonNull(taskId));
         if (entry == null) return null;
         return entry.taskStatus;
-
     }
 
     private class TaskEntry {

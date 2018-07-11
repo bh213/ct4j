@@ -14,5 +14,4 @@ public @interface ClusterTask {
     int maxRetries() default -1;
     int retryDelay() default -1;
     float retryBackoffFactor() default -1;
-
 }

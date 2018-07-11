@@ -87,9 +87,7 @@ public class TestSpringBootFactory {
                 .isNotNull()
                 .isInstanceOf(NoDefaultConstructorTestTask.class)
                 .hasFieldOrPropertyWithValue("argument", "custom factory");
-
     }
-
 
     @Test
     @DisplayName("Custom factory doesn't provide instance")
@@ -99,8 +97,5 @@ public class TestSpringBootFactory {
 
         assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).hasCauseInstanceOf(NoSuchBeanDefinitionException.class);
     }
-
-
-
 }
 

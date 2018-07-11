@@ -63,7 +63,6 @@ public class TestSchedulerIntegration {
 
     }
 
-
     @Test
     @DisplayName("test multiple tasks")
     public void testMultipleTasksTask() throws Exception {
@@ -74,7 +73,7 @@ public class TestSchedulerIntegration {
         }
 
         scheduler.startScheduling();
-        Thread.sleep(100);
+        Thread.sleep(500);
         scheduler.stopScheduling();
 
         for (String taskId : tasks) {
@@ -87,6 +86,4 @@ public class TestSchedulerIntegration {
                     .isEqualTo(TaskStatus.Success);
         }
     }
-
-
 }

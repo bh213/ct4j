@@ -19,7 +19,5 @@ public interface TaskManager {
 
     void addEventListener(ClusterTasksCustomFactory customTaskFactory);
     void removeEventListener(ClusterTasksCustomFactory customTaskFactory);
-
-
 }
 

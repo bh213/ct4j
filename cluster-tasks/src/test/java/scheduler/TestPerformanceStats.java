@@ -93,8 +93,5 @@ public class TestPerformanceStats {
         assertThat(interval.getIntervalStats().get(null).getErrors()).isEqualTo(13);
         assertThat(interval.getIntervalStats().get(null).getSuccess()).isEqualTo(14);
         assertThat(interval.getIntervalStats().get(null).getFailures()).isEqualTo(15);
-
-
-
     }
 }

@@ -33,9 +33,7 @@ public class TestBasicFactory {
     public void createFailsOnTaskWithNoDefaultConstructor() throws Exception {
         DefaultConstructorTaskFactory factory = new DefaultConstructorTaskFactory();
         assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).hasCauseInstanceOf(NoSuchMethodException.class);
-
     }
-
 
     @Test
     @DisplayName("Test creation by custom factory")
@@ -48,7 +46,6 @@ public class TestBasicFactory {
                 .isNotNull()
                 .isInstanceOf(NoDefaultConstructorTestTask.class)
                 .hasFieldOrPropertyWithValue("argument", "custom factory");
-
     }
 
     @Test
@@ -58,7 +55,5 @@ public class TestBasicFactory {
         factory.addCustomTaskFactory(taskClass -> null);
         assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).hasCauseInstanceOf(NoSuchMethodException.class);
     }
-
-
 }
 

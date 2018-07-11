@@ -11,5 +11,4 @@ public class DefaultConstructorTaskFactory extends TaskFactoryBase {
         if (instance == null) return taskClass.newInstance();
         else return instance;
     }
-
 };

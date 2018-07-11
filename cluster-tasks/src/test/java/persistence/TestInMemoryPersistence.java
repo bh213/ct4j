@@ -28,7 +28,5 @@ public class TestInMemoryPersistence extends TestPersistenceBase{
         fixedTimeProvider.setCurrent(Instant.now());
         taskPersistence = new InMemoryTaskPersistence(clusterInstance, taskFactory, new ClusterTasksConfig(), fixedTimeProvider);
     }
-
-
 }
 

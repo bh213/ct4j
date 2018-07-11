@@ -16,7 +16,6 @@ import java.util.List;
 @Repository
 public interface ClusterTaskRepository extends JpaRepository<ClusterTaskEntity, Long> {
 
-
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Modifying
     @Query("UPDATE ClusterTaskEntity ct SET ct.lockedByInstanceId = ?2, ct.lastUpdate = ?3, ct.lockTime = ?3, ct.status='Running' WHERE ct.id IN ?1 AND ct.lockedByInstanceId = NULL AND ct.status='Pending'")
@@ -45,7 +44,4 @@ public interface ClusterTaskRepository extends JpaRepository<ClusterTaskEntity, 
     @Modifying
     @Query("UPDATE ClusterTaskEntity ct SET ct.lockedByInstanceId = NULL, ct.lastUpdate = ?5, ct.lockTime = NULL, ct.status='Pending', ct.retryCount=?3, ct.nextRun=?4 WHERE ct.id =?1 AND ct.lockedByInstanceId = ?2")
     int unlockAndSetRetryCount(long id, String instanceId, int retryCount, Date newScheduledTime, Date current);
-
-
-
 }

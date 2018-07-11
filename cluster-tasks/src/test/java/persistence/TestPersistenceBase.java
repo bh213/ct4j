@@ -24,7 +24,6 @@ public abstract class TestPersistenceBase {
     protected TaskFactory taskFactory;
     protected FixedTimeProvider fixedTimeProvider = new FixedTimeProvider();
 
-
     @Test
     @DisplayName("Test simple task creation, null input")
     public void createTaskNullInput() throws Exception {
