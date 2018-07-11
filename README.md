@@ -3,11 +3,37 @@ cluster tasks for java (CT4j)
 
 ## Features
 
-* Cluster aware (tasks runs at single cluster node)
-* retrying and error handling
-* task workflows
-* Spring boot support
-* can handle millions of tasks
+##### Cluster aware 
+
+Each task runs at exactly one node at the time. Retries can run at the same or different node. Tasks on failed node will be run by different node.
+
+
+##### Retrying and error handling
+
+Task can declare retry behavior or implement logic to decide whether to retry or fail.   
+
+
+##### task workflows
+
+Task can spawn next task in workflow on failure or success.
+ 
+
+##### Spring boot support
+
+Uses JPA for database access and cluster support
+
+Tasks can be beans and can use `@Autowired`   
+
+##### Designed for millions of tasks
+
+This library can process very short or long lived tasks
+
+
+##### Resource based scheduling
+
+Task can declare required resources, such as CPU and memory usage and scheduler will take this into account. 
+This enables running long resource intensive tasks togather with very short tasks without having to worry about situation where all resource intensive tasks are started at the same node.
+
 
 ## Example task
 
