@@ -25,14 +25,13 @@ public class ExampleTask extends Task<String> {
 ## Running example task
 
 ```java
-        final String taskId = taskManager.queueTask(ExampleTask.class, "example input");
+    final String taskId = taskManager.queueTask(ExampleTask.class, "example input");
 ```
 
 
 ## Spring boot task
 
 ```java
-// TODO
 public class AutowiredTask extends Task<String> {
     private static Logger log = LoggerFactory.getLogger(AutowiredTask.class);
 
@@ -57,34 +56,3 @@ public class AutowiredTask extends Task<String> {
 
 
 
-
-### TODO:
-v1:
-
-- [ ] tests
-    - [x] scheduler
-    - [ ] task runner
-    - [ ] cluster/network Instance stuff
-
-- [ ] cleanup/fix/refactor performance stats
-- [ ] recurring cluster tasks support
-- [ ] detect crashed instances
-- [ ] detect too long running tasks
-- [x] custom task factory
-- [ ] configuration support
-    - [ ] validate tasks (serialize & deserialize input & task on queue)
-- [ ] docs
-- [ ] samples
-- rename (cluster tasks 4 java, ct4j)
-
-
-
-next:
-- [ ] hazelcast runner
-- [ ] lambda runner
-- [ ] db based time provider
-- [ ] jdbc persistence
-- [ ] enable tryToRunRetryOnDifferentNode
-- [ ] enable maximumNumberOfConcurrentTasksOfThisType
-- [ ] enable max running time
-- [ ] tasks shortcut
