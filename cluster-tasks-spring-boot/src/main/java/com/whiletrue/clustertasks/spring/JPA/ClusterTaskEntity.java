@@ -7,11 +7,12 @@ import javax.persistence.*;
 import java.util.Date;
 
 @Entity()
-@Table(name = "cluster_tasks")
+@Table(name = "ct4j_tasks", indexes = @Index(name="ct4j_tasks_next_run_index", columnList = "nextRun,priority"))
+
 public class ClusterTaskEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cluster_tasks_id_seq")
-    @SequenceGenerator(name = "cluster_tasks_id_seq", sequenceName = "cluster_tasks_id_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ct4j_tasks_id_seq")
+    @SequenceGenerator(name = "ct4j_tasks_id_seq", sequenceName = "ct4j_tasks_id_seq", allocationSize = 50)
     private Long id;
 
     @Column(nullable = false, length = 64)
@@ -27,6 +28,7 @@ public class ClusterTaskEntity {
 
     @Column(nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
+
     private Date nextRun;
 
     @Column(nullable = false)

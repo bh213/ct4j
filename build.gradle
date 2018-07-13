@@ -1,10 +1,24 @@
 allprojects {
-    task wrapper(type: Wrapper) {
-        gradleVersion = '4.6'
-    }
+    version = VERSION_NAME
+    group = GROUP
+    buildDir = "${project.rootDir}/build/${rootProject.name}/${project.name}"
 }
 
+
+
+wrapper {
+    gradleVersion = '4.8.1'
+}
+
+def isReleaseBuild() {
+    return version.contains("SNAPSHOT") == false
+}
+
+
+
 subprojects {
+
+
     tasks.withType(Test) {
 
         afterSuite { desc, result ->

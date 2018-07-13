@@ -1,3 +1,6 @@
+[![](https://jitpack.io/v/bh213/ct4j.svg)](https://jitpack.io/#bh213/ct4j)
+
+
 cluster tasks for java (CT4j)  
 ======================================
 
@@ -79,6 +82,16 @@ public class AutowiredTask extends Task<String> {
 }
 
 ```
+
+
+# Configuration
+
+
+| Property | Description | Default | Options |
+|:-------  |:----------- |:------- |:------  |
+| `ct4j.task-factory` | Task creation factory | `spring` | `spring` - spring boot factory with `@Autowired` support  <br/> `constructor` - default constructor factory|
+| `ct4j.persistence`| Task persistence mode | `memory` | `memory` - in-memory database <br/> `jpa` - JPA based persistence |
+| `ct4j.time-provider`| Time provider | `local` | `local` - uses local date provider |
 
 
 

@@ -245,4 +245,14 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     }
 
+    @Override
+    public boolean isClustered() {
+        return true;
+    }
+
+
+    @Override
+    public boolean isPersistent() {
+        return true;
+    }
 }

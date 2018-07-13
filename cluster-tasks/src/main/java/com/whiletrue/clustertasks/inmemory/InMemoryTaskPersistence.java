@@ -187,6 +187,16 @@ public class InMemoryTaskPersistence implements TaskPersistence {
         return entry.taskStatus;
     }
 
+    @Override
+    public boolean isClustered() {
+        return false;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        return false;
+    }
+
     private class TaskEntry {
 
         public final String taskId;

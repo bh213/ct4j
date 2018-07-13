@@ -22,4 +22,16 @@ public class ClusterTasksConfigurationProperties {
     public String getTimeProvider() {
         return timeProvider;
     }
+
+    public void setTaskFactory(String taskFactory) {
+        this.taskFactory = taskFactory;
+    }
+
+    public void setPersistence(String persistence) {
+        this.persistence = persistence;
+    }
+
+    public void setTimeProvider(String timeProvider) {
+        this.timeProvider = timeProvider;
+    }
 }

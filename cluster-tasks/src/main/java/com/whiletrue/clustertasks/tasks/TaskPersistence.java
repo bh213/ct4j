@@ -23,4 +23,18 @@ public interface TaskPersistence {
     TaskWrapper<?> getTask(String taskId);
 
     TaskStatus getTaskStatus(String taskId);
+
+
+    /**
+     *
+     * @return true if this persistence supports cluster and false if it does not
+     */
+    boolean isClustered();
+
+    /**
+     *
+     * @return true if this persistence class stores task data permanently or false if data is lost after node is terminated
+     */
+    boolean isPersistent();
+
 }

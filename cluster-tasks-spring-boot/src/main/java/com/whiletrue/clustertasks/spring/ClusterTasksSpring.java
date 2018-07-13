@@ -14,6 +14,8 @@ import com.whiletrue.clustertasks.scheduler.Scheduler;
 import com.whiletrue.clustertasks.scheduler.InternalTaskEvents;
 import com.whiletrue.clustertasks.timeprovider.LocalTimeProvider;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -33,6 +35,7 @@ import javax.annotation.PostConstruct;
 @Import(SpringTaskFactory.class)
 public class ClusterTasksSpring implements BeanFactoryAware {
 
+    private static Logger log = LoggerFactory.getLogger(ClusterTasksSpring.class);
     private final ClusterTasksConfigurationProperties configurationProperties;
     private TaskPersistence clusterTaskPersistence;
 
@@ -103,6 +106,20 @@ public class ClusterTasksSpring implements BeanFactoryAware {
         TaskRunner taskRunner = new StdTaskRunner(clusterTaskPersistence, clusterTasksConfig, timeProvider);
         Scheduler scheduler = new Scheduler(clusterTaskPersistence, taskRunner, clusterTasksConfig);
         TaskManager taskManager = new StdTaskManager(clusterTaskPersistence, taskFactory, scheduler);
+
+        log.info("\n"+
+                "================================================================================\n" +
+                "  ct4j (Cluster tasks for Java)                                                 \n" +
+                "\n"+
+                "  Time provider:      " + timeProvider.getClass().getSimpleName()+"\n" +
+                "  Task factory:       " + taskFactory.getClass().getSimpleName()+"\n" +
+                "  Persistence:        " + clusterTaskPersistence.getClass().getSimpleName()+"\n" +
+                "      Persistent:     " + clusterTaskPersistence.isPersistent()+"\n" +
+                "      Clustered:      " + clusterTaskPersistence.isClustered()+"\n" +
+                "  Persistence:        " + clusterTaskPersistence.getClass().getSimpleName()+"\n" +
+                "  Task runner:        " + taskRunner.getClass().getSimpleName()+"\n" +
+                "  Scheduler:          " + scheduler.getClass().getSimpleName()+"\n" +
+                "================================================================================\n");
         return taskManager;
     }
 

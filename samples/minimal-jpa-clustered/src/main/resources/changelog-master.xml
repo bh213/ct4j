@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <include file="classpath:ct4j-liquibase-migration.xml"/>
+
+
+
+    <changeSet id="buga-123" author="bh213">
+        <createTable tableName="test-table">
+            <column name="id" type="bigint">
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
