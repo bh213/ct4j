@@ -1,4 +1,4 @@
-package com.whiletrue.clustertasks.JPA;
+package com.whiletrue.clustertasks.spring.JPA;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

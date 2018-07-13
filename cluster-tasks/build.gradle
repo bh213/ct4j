@@ -8,10 +8,10 @@ buildscript {
 plugins {
     id 'java'
     id 'idea'
+    id 'maven-publish'
 }
 
-
-group 'while-true'
+group 'com.whiletrue'
 version '1.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
@@ -30,10 +30,17 @@ dependencies {
 }
 
 test {
-
     useJUnitPlatform {
         includeEngines 'junit-jupiter'
     }
 
     failFast = true
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }

@@ -16,6 +16,7 @@ plugins {
     id 'java'
     id 'eclipse'
     id "io.spring.dependency-management" version "1.0.5.RELEASE"
+    id 'maven-publish'
 
 }
 
@@ -27,7 +28,7 @@ dependencyManagement {
 
 
 
-group 'while-true'
+group 'com.whiletrue'
 version '1.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
@@ -71,4 +72,12 @@ test {
         includeEngines 'junit-jupiter'
     }
     failFast = true
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }

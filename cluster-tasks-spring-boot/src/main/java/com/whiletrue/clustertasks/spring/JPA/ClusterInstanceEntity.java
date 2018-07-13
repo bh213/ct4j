@@ -1,9 +1,6 @@
-package com.whiletrue.clustertasks.JPA;
-
-import com.whiletrue.clustertasks.tasks.TaskStatus;
+package com.whiletrue.clustertasks.spring.JPA;
 
 import javax.persistence.*;
-import java.time.Instant;
 import java.util.Date;
 
 @Entity()

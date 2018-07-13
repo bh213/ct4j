@@ -1,7 +1,6 @@
-package com.whiletrue.clustertasks.JPA;
+package com.whiletrue.clustertasks.spring;
 
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jpa.convert.threeten.Jsr310JpaConverters;
 
 import java.lang.annotation.*;
 

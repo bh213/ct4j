@@ -1,4 +1,4 @@
-package com.whiletrue.clustertasks.JPA;
+package com.whiletrue.clustertasks.spring.JPA;
 
 
 import com.whiletrue.clustertasks.tasks.TaskStatus;

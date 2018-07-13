@@ -1,7 +1,7 @@
 package factory;
 
 
-import com.whiletrue.clustertasks.JPA.SpringTaskFactory;
+import com.whiletrue.clustertasks.spring.SpringTaskFactory;
 import com.whiletrue.clustertasks.tasks.Task;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestSpringBootFactory {
 
     @Autowired
-    ApplicationContext applicationContext;
+    AutowireCapableBeanFactory applicationContext;
 
 
     @Configuration
