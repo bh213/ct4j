@@ -94,4 +94,9 @@ public class AutowiredTask extends Task<String> {
 | `ct4j.time-provider`| Time provider | `local` | `local` - uses local date provider |
 
 
+# Samples
+
+[List of samples](samples/README.md) 
+
+
 
