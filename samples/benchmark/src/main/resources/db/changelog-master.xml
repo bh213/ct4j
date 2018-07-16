@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+
+    <include file="classpath:ct4j-liquibase-migration.xml"/>
+
+    <changeSet id="initial-tables" author="bh213">
+
+        <createTable tableName="test_task_table">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="instance_id" type="varchar(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="done" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retry1" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="retry2" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="retry3" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="expected_retries" type="bigint" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error" type="varchar(256)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="log" type="varchar(4096)">
+                <constraints nullable="true"/>
+            </column>
+
+        </createTable>
+
+        <createIndex indexName="test_task_table_primary"
+                     tableName="test_task_table"
+        >
+            <column name="id"/>
+        </createIndex>
+
+
+    </changeSet>
+
+
+</databaseChangeLog>

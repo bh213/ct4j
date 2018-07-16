@@ -11,21 +11,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
+import java.util.Optional;
+
 
 public class TestTask extends Task<TestTask.Input> {
     private static Logger log = LoggerFactory.getLogger(TestTask.class);
 
     private TaskManager taskManager;
-
     private ApplicationContext applicationContext;
+    private TestTaskTableRepository testTaskTableRepository;
 
-     private TestTaskTableRepository testTaskTableRepository;
-
-   @Autowired
+    @Autowired
     public TestTask(TaskManager taskManager, ApplicationContext applicationContext) {
         this.taskManager = taskManager;
-       this.applicationContext = applicationContext;
-       this.testTaskTableRepository = (TestTaskTableRepository) applicationContext.getBean("testTaskTableRepository");
+        this.applicationContext = applicationContext;
+        this.testTaskTableRepository = (TestTaskTableRepository) applicationContext.getBean("testTaskTableRepository");
     }
 
 
@@ -45,11 +45,11 @@ public class TestTask extends Task<TestTask.Input> {
         log.info("running row {} retry {}, requested retries {}", input.rowid, taskExecutionContext.getRetry(), input.retries);
 
         Thread.sleep(300);
-        final TestTaskTable table = testTaskTableRepository.findOne(input.rowid);
-        if (table == null) throw new Exception("No table for me!");
+        final Optional<TestTaskTable> tableOpt = testTaskTableRepository.findById(input.rowid);
+        if (!tableOpt.isPresent()) throw new Exception("No table for me!");
 
 
-
+        final TestTaskTable table = tableOpt.get();
         //if (table.getId() == 444) throw new RuntimeException("Waaa");
 
         table.setInstanceId(taskExecutionContext.getClusterNodeId());
@@ -80,7 +80,6 @@ public class TestTask extends Task<TestTask.Input> {
             default:
                 table.setError("unexpected retry " + taskExecutionContext.getRetry());
         }
-
 
 
         if (taskExecutionContext.getRetry() < input.retries) {

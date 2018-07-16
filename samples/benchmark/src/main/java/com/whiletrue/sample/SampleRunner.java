@@ -66,9 +66,6 @@ public class SampleRunner implements ApplicationRunner {
 
         if (args.containsOption("generator")) {
 
-
-
-
             log.info("Testing with count {}", count);
 
             StopWatch sw = new StopWatch();
