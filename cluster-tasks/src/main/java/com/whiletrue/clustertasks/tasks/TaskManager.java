@@ -1,6 +1,11 @@
 package com.whiletrue.clustertasks.tasks;
 
 import com.whiletrue.clustertasks.factory.ClusterTasksCustomFactory;
+import com.whiletrue.clustertasks.scheduler.ExecutionStats;
+import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsInterval;
+import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsSnapshot;
+
+import java.util.Map;
 
 public interface TaskManager {
     <INPUT, TASK extends Task<INPUT>> String queueTask(Class<TASK> taskClass, INPUT input) throws Exception;
@@ -15,9 +20,11 @@ public interface TaskManager {
 
     ResourceUsage getFreeResourcesEstimate();
 
-    String getStats();
+    void addCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory);
+    void remoteCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory);
 
-    void addEventListener(ClusterTasksCustomFactory customTaskFactory);
-    void removeEventListener(ClusterTasksCustomFactory customTaskFactory);
+    TaskPerformanceStatsInterval getPerformanceInterval(TaskPerformanceStatsSnapshot start, TaskPerformanceStatsSnapshot end);
+
+    Map<String, ExecutionStats> getPerformanceSnapshot();
 }
 

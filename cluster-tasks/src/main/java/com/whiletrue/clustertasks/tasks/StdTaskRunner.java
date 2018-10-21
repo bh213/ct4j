@@ -29,7 +29,7 @@ public class StdTaskRunner implements TaskRunner {
         long allocatedMemory      = (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
         long presumableFreeMemory = Runtime.getRuntime().maxMemory() - allocatedMemory;
 
-        this.currentResourceUsage = new ResourceUsage( Runtime.getRuntime().availableProcessors(), presumableFreeMemory/1000000);
+        this.currentResourceUsage = new ResourceUsage( Runtime.getRuntime().availableProcessors(), presumableFreeMemory/1000000.0f);
         log.info("estimated available resources: {}", this.currentResourceUsage);
     }
 
@@ -71,7 +71,7 @@ public class StdTaskRunner implements TaskRunner {
                 } catch (Exception e) {
                     log.error("Task with id {} has throw exception in onSuccess: {}", taskExecutionContext.getTaskId(), e);
                 }
-                // TODO: add agreggator
+                // TODO: add aggregator
                 taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
                 log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
                 future.complete(TaskStatus.Success);
@@ -137,7 +137,7 @@ public class StdTaskRunner implements TaskRunner {
 
         } else {
             final double calculatedDelay = retryDelay * Math.pow(retryBackoffFactor, currentRetry);
-            log.info("Failed task {} scheduled for retry #{} out of {}, delay {}", taskExecutionContext.getTaskId(), currentRetry + 1, maxRetries, calculatedDelay);
+            log.info("Failed task {} scheduled for retry {} out of {}, delay {}", taskExecutionContext.getTaskId(), currentRetry + 1, maxRetries, calculatedDelay);
             taskPersistence.unlockAndMarkForRetry(taskWrapper, currentRetry + 1, timeProvider.getCurrent().plusMillis((long) calculatedDelay));
 
         }

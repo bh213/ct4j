@@ -4,6 +4,8 @@ import com.whiletrue.clustertasks.tasks.Task;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TaskPerformanceStatsSnapshot {
     private final HashMap<Class<? extends Task>, ExecutionStats> perTaskStats;
@@ -38,5 +40,14 @@ public class TaskPerformanceStatsSnapshot {
         sb.append("===============================================================================\n");
         return sb.toString();
     }
+
+    public Map<String, ExecutionStats> toMap() {
+        return perTaskStats.entrySet().stream().collect(Collectors.toMap(e-> e.getKey() == null ? "total" : e.getKey().getName(), Map.Entry::getValue));
+    }
+
+
+
+
+
 }
 

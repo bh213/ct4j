@@ -2,11 +2,15 @@ package com.whiletrue.clustertasks.tasks;
 
 import com.whiletrue.clustertasks.factory.ClusterTasksCustomFactory;
 import com.whiletrue.clustertasks.factory.TaskFactory;
+import com.whiletrue.clustertasks.scheduler.ExecutionStats;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
 import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsInterval;
 import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.Objects;
 
 public class StdTaskManager implements TaskManager {
 
@@ -65,27 +69,33 @@ public class StdTaskManager implements TaskManager {
     }
 
     @Override
-    public void addEventListener(ClusterTasksCustomFactory customTaskFactory) {
+    public void addCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory) {
         taskFactory.addCustomTaskFactory(customTaskFactory);
     }
 
     @Override
-    public void removeEventListener(ClusterTasksCustomFactory customTaskFactory) {
+    public void remoteCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory) {
         taskFactory.removeCustomTaskFactory(customTaskFactory);
     }
 
-    // TODO: remove/change
-    @Override
-    public String getStats(){
 
-        final TaskPerformanceStatsSnapshot currentPerformanceSnapshot = scheduler.getPerformanceSnapshot();
-        String retVal = "";
+
+    @Override
+    public TaskPerformanceStatsInterval getPerformanceInterval(TaskPerformanceStatsSnapshot start, TaskPerformanceStatsSnapshot end){
+        return new TaskPerformanceStatsInterval(Objects.requireNonNull(start, "start must not be null"), Objects.requireNonNull(start, "end must not be null"));
+    }
+
+    @Override
+    public Map<String, ExecutionStats> getPerformanceSnapshot(){
+
+        return scheduler.getPerformanceSnapshot().toMap();
+        /*String retVal = "";
         if (lastPerformanceSnapshot != null) {
 
             TaskPerformanceStatsInterval interval = new TaskPerformanceStatsInterval(lastPerformanceSnapshot, currentPerformanceSnapshot);
             retVal = interval.toTableString();
         }
         lastPerformanceSnapshot = currentPerformanceSnapshot;
-        return retVal;
+        return retVal;*/
     }
 }

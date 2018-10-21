@@ -3,29 +3,23 @@ package com.whiletrue.sample;
 import com.whiletrue.clustertasks.tasks.Task;
 import com.whiletrue.clustertasks.tasks.TaskConfig;
 import com.whiletrue.clustertasks.tasks.TaskExecutionContext;
-import com.whiletrue.clustertasks.tasks.TaskManager;
 import com.whiletrue.sample.jpa.TestTaskTable;
 import com.whiletrue.sample.jpa.TestTaskTableRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 
 import java.util.Optional;
 
 
 public class TestTask extends Task<TestTask.Input> {
     private static Logger log = LoggerFactory.getLogger(TestTask.class);
+    private final TestTaskTableRepository testTaskTableRepository;
 
-    private TaskManager taskManager;
-    private ApplicationContext applicationContext;
-    private TestTaskTableRepository testTaskTableRepository;
 
     @Autowired
-    public TestTask(TaskManager taskManager, ApplicationContext applicationContext) {
-        this.taskManager = taskManager;
-        this.applicationContext = applicationContext;
-        this.testTaskTableRepository = (TestTaskTableRepository) applicationContext.getBean("testTaskTableRepository");
+    public TestTask(TestTaskTableRepository testTaskTableRepository) {
+        this.testTaskTableRepository = testTaskTableRepository;
     }
 
 
@@ -35,7 +29,7 @@ public class TestTask extends Task<TestTask.Input> {
                 .setPriority(1000)
                 .setRetryDelay(0, 1)
                 .setMaxRetries(10)
-                .estimateResourceUsage(0.05f, 10)
+                .estimateResourceUsage(0.01f, 10)
                 .build();
     }
 

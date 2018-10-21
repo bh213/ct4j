@@ -18,7 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Scheduler implements InternalTaskEvents {
 
 
-    public static final String CLUSTER_TASKS_SCHEDULER_THREAD = "Cluster tasks scheduler thread";
+    public static final String CLUSTER_TASKS_SCHEDULER_THREAD = "ct4j-scheduler";
     private static Logger log = LoggerFactory.getLogger(Scheduler.class);
     private final Lock lock = new ReentrantLock();
     private final Condition waitingForPolling = lock.newCondition();
@@ -130,6 +130,11 @@ public class Scheduler implements InternalTaskEvents {
                     log.debug("Not enough resources to claim task {}", candidate.getTaskExecutionContext().getTaskId());
                 }
 
+            }
+
+            if (candidatesAfterResources.size() == 0) {
+                log.debug("No tasks to claim");
+                return;
             }
 
             final int claimedCount = taskPersistence.tryClaimTasks(candidatesAfterResources);
