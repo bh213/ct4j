@@ -16,7 +16,7 @@ The following tasks are available:
 |--- | --- |
 | Empty Task| Tests ct4j performance and does nothing|
 | Failing Task| Task that always fails, tests errors  and retrying and failure handling|
-| Get Url Task| Does GET to specified URL. Tests I/O and handkles either success or failure depending on url configured|
+| Get Url Task| Does GET to specified URL. Tests I/O and handles either success or failure depending on url configured|
 | Single Full Cpu Task| Fully uses a CPU core for a specified number of milliseconds|
     
 
