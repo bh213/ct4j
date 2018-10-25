@@ -13,7 +13,7 @@ import org.springframework.web.client.RestTemplate;
 @SpringBootApplication
 @EntityScan
 @EnableJpaRepositories
-@EnableConfigurationProperties
+@EnableConfigurationProperties(BenchmarkConfigurationProperties.class)
 public class BenchmarkApplication {
 
     @Bean

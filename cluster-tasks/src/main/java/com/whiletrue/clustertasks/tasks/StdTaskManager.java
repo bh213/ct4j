@@ -62,6 +62,11 @@ public class StdTaskManager implements TaskManager {
         scheduler.startScheduling();
     }
 
+    @Override
+    public long countPendingTasks() {
+        return taskPersistence.countPendingTasks();
+    }
+
 
     @Override
     public ResourceUsage getFreeResourcesEstimate(){

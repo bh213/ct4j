@@ -1,15 +1,17 @@
 package persistence;
 
 
-import com.whiletrue.clustertasks.spring.*;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.spring.JPA.ClusterInstanceRepository;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskEntity;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskRepository;
 import com.whiletrue.clustertasks.spring.JPA.JpaClusterTaskPersistence;
+import com.whiletrue.clustertasks.spring.SpringTaskFactory;
 import com.whiletrue.clustertasks.tasks.ClusterTasksConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
@@ -24,9 +26,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import tasks.WrongInputClassTask;
 
 import java.time.Instant;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 
@@ -64,5 +68,18 @@ public class TestInJpaTaskPersistence extends TestPersistenceBase {
             SpringApplication.run(TestApp.class, args);
         }
     }
+
+
+    @Test
+    @DisplayName("Test task validation")
+    public void createTaskValidInput() throws Exception {
+
+        assertThatThrownBy( ()-> taskPersistence.queueTask(new WrongInputClassTask(),  new WrongInputClassTask.InputWithoutDefaultConstructor("very valid string")))
+                .hasCauseInstanceOf(MismatchedInputException.class)
+                .hasMessageContaining("Did you forget to add default constructor to task input class?");
+
+    }
+
+
 }
 

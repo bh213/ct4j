@@ -188,6 +188,11 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     }
 
     @Override
+    public synchronized long countPendingTasks() {
+        return tasksInQueue.size();
+    }
+
+    @Override
     public boolean isClustered() {
         return false;
     }

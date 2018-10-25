@@ -22,7 +22,7 @@ public class Scheduler implements InternalTaskEvents {
     private static Logger log = LoggerFactory.getLogger(Scheduler.class);
     private final Lock lock = new ReentrantLock();
     private final Condition waitingForPolling = lock.newCondition();
-    private final AtomicBoolean isSchedulerThreadRunning = new AtomicBoolean(true);
+    private final AtomicBoolean isSchedulerThreadRunning = new AtomicBoolean(false);
     private TaskPersistence taskPersistence;
     private TaskRunner taskRunner;
     private Thread schedulerThread;
@@ -61,7 +61,7 @@ public class Scheduler implements InternalTaskEvents {
                 try {
                     waitingForPolling.await(nextPollingTimeInMilliseconds, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
-                    log.info("scheduler thread interrupted", e); // TODO: Remove this
+                    log.debug("scheduler thread interrupted", e); // TODO: Remove this
                 } finally {
                     lock.unlock();
                 }
@@ -76,6 +76,7 @@ public class Scheduler implements InternalTaskEvents {
                 }
             }
         }
+        log.info("Exiting scheduler thread");
     }
 
 
@@ -160,10 +161,19 @@ public class Scheduler implements InternalTaskEvents {
         }
     }
 
+    public boolean isSchedulerRunning() {
+        return isSchedulerThreadRunning.get();
+    }
+
     public synchronized void stopScheduling() {
         log.info("stopping scheduling thread");
 
-        isSchedulerThreadRunning.set(false);
+        boolean currentState = isSchedulerThreadRunning.getAndSet(false);
+        if (!currentState) {
+            log.warn("Scheduler already stopped");
+            return;
+        }
+
         lock.lock();
         try {
             waitingForPolling.signal();
@@ -171,18 +181,25 @@ public class Scheduler implements InternalTaskEvents {
             lock.unlock();
         }
 
-        try {
-            schedulerThread.join(100L);
-        } catch (InterruptedException e) {
-            schedulerThread.interrupt();
-            schedulerThread = null;
+        if (schedulerThread != null) {
+            try {
+                schedulerThread.join(100L);
+            } catch (InterruptedException e) {
+                schedulerThread.interrupt();
+                schedulerThread = null;
+            }
         }
         schedulerThread = null;
     }
 
     public synchronized void startScheduling() {
         log.info("Starting scheduling thread");
-        isSchedulerThreadRunning.set(true);
+        boolean currentState = isSchedulerThreadRunning.getAndSet(true);
+        if (currentState) {
+            log.warn("Scheduler already running");
+            return;
+        }
+
         schedulerThread = new Thread(null, this::schedulerThreadMain, CLUSTER_TASKS_SCHEDULER_THREAD);
         schedulerThread.setPriority(Thread.NORM_PRIORITY);
         schedulerThread.setUncaughtExceptionHandler((t, e) -> {
@@ -196,54 +213,38 @@ public class Scheduler implements InternalTaskEvents {
         taskPerformanceEventsCollector.taskStarted(name, id);
     }
 
-    @Override
-    public void taskCompleted(Class<? extends Task> name, String id, int retry, float milliseconds) {
 
-        taskPerformanceEventsCollector.taskCompleted(name, id, retry, milliseconds);
-
+    private void updatePollingTime() {
         lock.lock();
         try {
             waitingForPolling.signal();
         } finally {
             lock.unlock();
         }
-
         if (nextPollingTime == null) synchronized (this) {
             nextPollingTime = Instant.now().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
         }
+    }
+
+    @Override
+    public void taskCompleted(Class<? extends Task> name, String id, int retry, float milliseconds) {
+        taskPerformanceEventsCollector.taskCompleted(name, id, retry, milliseconds);
+        updatePollingTime();
 
     }
 
     @Override
     public void taskError(Class<? extends Task> name, String id, int retry, float milliseconds) {
         taskPerformanceEventsCollector.taskError(name, id, retry, milliseconds);
-        lock.lock();
-        try {
-            waitingForPolling.signal();
-        } finally {
-            lock.unlock();
-        }
-        if (nextPollingTime == null) synchronized (this) {
-            nextPollingTime = Instant.now().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
-        }
+        updatePollingTime();
     }
+
+
 
     @Override
     public void taskFailed(Class<? extends Task> name, String id, int retry) {
         taskPerformanceEventsCollector.taskFailed(name, id, retry);
-
-        lock.lock();
-        try {
-            waitingForPolling.signal();
-        } finally {
-            lock.unlock();
-        }
-
-        if (nextPollingTime == null) synchronized (this) {
-            nextPollingTime = Instant.now().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
-        }
-
-
+        updatePollingTime();
     }
 
     public ResourceUsage getFreeResourcesEstimate() {

@@ -13,10 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 import tasks.ExampleTask;
-import tasks.NoOpTestTask;
-
+import tasks.IntegerTask;
 import java.time.Instant;
-import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -64,4 +62,25 @@ public class TestTaskManager {
                 .isEqualTo(TaskStatus.Success);
 
     }
+
+
+    @Test
+    @DisplayName("test integer task")
+    public void testIntegerTask() throws Exception {
+        final String taskId = taskManager.queueTask(IntegerTask.class, 1111);
+        taskManager.startScheduling();
+
+        Thread.sleep(100);
+        taskManager.stopScheduling();
+        final TaskWrapper<?> task = taskPersistence.getTask(taskId); // TODO: use taskmanager
+        assertThat(task).isNotNull();
+        assertThat(taskPersistence.getTaskStatus(taskId))
+                .isNotNull()
+                .isEqualTo(TaskStatus.Success);
+
+    }
+
+
+
+
 }

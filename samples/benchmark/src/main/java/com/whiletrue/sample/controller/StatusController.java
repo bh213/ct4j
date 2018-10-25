@@ -1,6 +1,7 @@
 package com.whiletrue.sample.controller;
 
 import com.whiletrue.clustertasks.scheduler.ExecutionStats;
+import com.whiletrue.clustertasks.tasks.ResourceUsage;
 import com.whiletrue.clustertasks.tasks.TaskManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +21,12 @@ public class StatusController {
     }
 
     @GetMapping(path = "/", produces = "application/json")
-    public Map<String, ExecutionStats> getStatus() {
-        return taskManager.getPerformanceSnapshot();
+    public StatusResponse getStatus() {
+        final Map<String, ExecutionStats> performanceSnapshot = taskManager.getPerformanceSnapshot();
+        final ResourceUsage resourceUsage = taskManager.getFreeResourcesEstimate();
+        return new StatusResponse(performanceSnapshot,resourceUsage );
+
+
+
     }
 }

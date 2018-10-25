@@ -16,7 +16,7 @@ Each task runs at exactly one node at the time. Retries can run at the same or d
 Task can declare retry behavior or implement logic to decide whether to retry or fail.   
 
 
-##### task workflows
+##### Task workflows
 
 Task can spawn next task in workflow on failure or success.
  
@@ -25,7 +25,7 @@ Task can spawn next task in workflow on failure or success.
 
 Uses JPA for database access and cluster support
 
-Tasks can be beans and can use `@Autowired`   
+Tasks can be beans and can dependency injection (e.g. `@Autowired`)   
 
 ##### Designed for millions of tasks
 
@@ -35,7 +35,17 @@ This library can process very short or long lived tasks
 ##### Resource based scheduling
 
 Task can declare required resources, such as CPU and memory usage and scheduler will take this into account. 
-This enables running long resource intensive tasks togather with very short tasks without having to worry about situation where all resource intensive tasks are started at the same node.
+This enables running long resource intensive tasks together with very short tasks without having to worry about situation where all resource intensive tasks are started at the same node.
+
+
+##### Priority support
+
+Tasks are by specified priority, making sure important tasks such as notifications are run before long-running processing tasks.
+
+
+##### Ready to run
+
+Includes liquibase database migration and docker commands to get you started quickly. See  [samples](samples/README.md). 
 
 
 ## Example task

@@ -37,7 +37,7 @@ public class GetUrlTask extends Task<GetUrlTask.Input> {
     @Override
     public void run(Input input, TaskExecutionContext taskExecutionContext) throws Exception {
         log.info("Running GET {}, retry {}", input.getUrl(), taskExecutionContext.getRetry());
-        final String response = restTemplate.getForObject(input.url, String.class);
+        final String response = restTemplate.getForObject(input.url, String.class, taskExecutionContext.getTaskId());
         log.info("Got response, length: {}", Objects.requireNonNull(response).length());
 
     }

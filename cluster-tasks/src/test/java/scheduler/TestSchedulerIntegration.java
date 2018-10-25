@@ -64,6 +64,33 @@ public class TestSchedulerIntegration {
     }
 
     @Test
+    @DisplayName("start scheduler multiple times")
+    public void startSchedulerMultipleTimes() throws Exception {
+        scheduler.startScheduling();
+        Thread.sleep(100);
+        scheduler.startScheduling();
+        scheduler.startScheduling();
+        scheduler.stopScheduling();
+
+    }
+
+    @Test
+    @DisplayName("stop scheduler multiple times")
+    public void stopSchedulerMultipleTimes() throws Exception {
+        scheduler.startScheduling();
+
+        scheduler.stopScheduling();
+        scheduler.stopScheduling();
+        Thread.sleep(100);
+        scheduler.stopScheduling();
+    }
+
+
+
+
+
+
+    @Test
     @DisplayName("test multiple tasks")
     public void testMultipleTasksTask() throws Exception {
         ArrayList<String> tasks = new ArrayList<>();

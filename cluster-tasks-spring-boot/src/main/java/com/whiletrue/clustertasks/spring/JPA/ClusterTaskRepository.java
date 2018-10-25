@@ -31,6 +31,10 @@ public interface ClusterTaskRepository extends JpaRepository<ClusterTaskEntity, 
     @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.status='Pending' AND ct.lockTime = NULL AND ct.nextRun <= ?1 ORDER BY ct.priority DESC")
     List<ClusterTaskEntity> getAllPending(Pageable pageable, Date current);
 
+    @Transactional(isolation = Isolation.READ_UNCOMMITTED)
+    @Query("SELECT COUNT(ct) FROM ClusterTaskEntity ct WHERE ct.status='Pending' AND ct.lockTime = NULL AND ct.nextRun <= ?1 ")
+    long  countPendingTasks(Date current);
+
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.lockedByInstanceId = ?2 AND ct.id IN ?1")
     List<ClusterTaskEntity> findActuallyLocked(Collection<Long> id, String instanceId);

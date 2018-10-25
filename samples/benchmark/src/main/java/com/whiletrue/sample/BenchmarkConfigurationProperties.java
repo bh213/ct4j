@@ -13,14 +13,27 @@ public class BenchmarkConfigurationProperties {
         GENERATOR
     }
 
+
+    /**
+     * specified which URL should GetUrlTask use
+     */
     private String testGetUrl;
     private BenchmarkMode mode;
+    private boolean disableTaskLogs = false;
 
     private int RESTTaskPerSecond = 3;
+
     private int CPUTasksPerSecond = 2;
     private int FailingTasksPerSecond = 2;
     private int ShortTasksPerSecond = 100;
 
+    public boolean isDisableTaskLogs() {
+        return disableTaskLogs;
+    }
+
+    public void setDisableTaskLogs(boolean disableTaskLogs) {
+        this.disableTaskLogs = disableTaskLogs;
+    }
 
     public int getShortTasksPerSecond() {
         return ShortTasksPerSecond;
@@ -29,8 +42,6 @@ public class BenchmarkConfigurationProperties {
     public void setShortTasksPerSecond(int shortTasksPerSecond) {
         ShortTasksPerSecond = shortTasksPerSecond;
     }
-
-
 
 
     public int getRESTTaskPerSecond() {

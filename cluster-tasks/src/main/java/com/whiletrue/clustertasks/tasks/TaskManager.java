@@ -15,8 +15,8 @@ public interface TaskManager {
     <INPUT, TASK extends Task<INPUT>> String queueTaskDelayed(Class<TASK> taskClass, INPUT input, long millisecondStartDelay, int priority) throws Exception;
 
     void stopScheduling();
-
     void startScheduling();
+    long countPendingTasks();
 
     ResourceUsage getFreeResourcesEstimate();
 

@@ -143,7 +143,12 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     @Override
     public List<TaskWrapper<?>> pollForNextTasks(int maxTasks) throws Exception {
         // TODO: optimize... a ... lot!!!
-        return clusterTaskRepository.getAllPending(new PageRequest(0, maxTasks), timeProvider.getCurrentDate()).stream().map(this::entityToTask).collect(Collectors.toList());
+        return clusterTaskRepository.getAllPending(PageRequest.of(0, maxTasks), timeProvider.getCurrentDate()).stream().map(this::entityToTask).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countPendingTasks() {
+        return clusterTaskRepository.countPendingTasks(timeProvider.getCurrentDate());
     }
 
     @Override
@@ -195,6 +200,17 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
             log.error("Could not serialize input for task '{}', input '{}': {}", taskConfig.getTaskName(), input, e);
             throw new Exception(e);
         }
+
+        if (input != null) {
+            try {
+                deserializeInput(serializedInput, input.getClass());
+            } catch (Exception e) {
+                log.error("Task configuration validation: could not deserialize serialized input. Did you forget to add default constructor to task input class?\nTask '{}', input '{}' input class '{}': {}", taskConfig.getTaskName(), input, input.getClass(), e);
+                throw new Exception("Task configuration validation: could not deserialize serialized input. Did you forget to add default constructor to task input class?", e);
+            }
+        }
+
+
 
         final ClusterTaskEntity entity = createInitialEntityFromTask(task, serializedInput, taskConfig.getTaskName());
 

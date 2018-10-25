@@ -23,7 +23,7 @@ public interface TaskPersistence {
     TaskWrapper<?> getTask(String taskId);
 
     TaskStatus getTaskStatus(String taskId);
-
+    long countPendingTasks();
 
     /**
      *
