@@ -1,6 +1,6 @@
 package TaskManager;
 
-import com.whiletrue.clustertasks.factory.TaskFactory;
+import com.whiletrue.clustertasks.factory.TaskFactoryBase;
 import com.whiletrue.clustertasks.inmemory.DefaultConstructorTaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
 import com.whiletrue.clustertasks.instanceid.ClusterInstance;
@@ -14,10 +14,11 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 import tasks.ExampleTask;
 import tasks.IntegerTask;
+
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @DisplayName("Scheduler tests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -25,7 +26,7 @@ public class TestTaskManager {
 
     protected TaskPersistence taskPersistence;
     protected ClusterInstance clusterInstance;
-    protected TaskFactory taskFactory;
+    protected TaskFactoryBase taskFactory;
     protected FixedTimeProvider fixedTimeProvider = new FixedTimeProvider();
     protected Scheduler scheduler;
     protected TaskRunner taskRunner;
@@ -77,6 +78,48 @@ public class TestTaskManager {
         assertThat(taskPersistence.getTaskStatus(taskId))
                 .isNotNull()
                 .isEqualTo(TaskStatus.Success);
+
+    }
+
+    @Test
+    @DisplayName("test custom task factory add/remove")
+    public void testCustomFactory() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            taskManager.setCallbacksListener(new TaskCallbacksListener() {});
+            taskManager.setCallbacksListener(null);
+        }
+        taskManager.setCallbacksListener(new TaskCallbacksListener() {});
+        assertThat(taskFactory.getCustomTaskFactoriesCount()).isEqualTo(1);
+        taskManager.setCallbacksListener(null);
+        assertThat(taskFactory.getCustomTaskFactoriesCount()).isEqualTo(0);
+    }
+
+
+    @Test
+    @DisplayName("test task event - task completed")
+    public void testTaskCompletedEvent() throws Exception {
+        final String taskId = taskManager.queueTask(IntegerTask.class, 1111);
+
+        TaskCallbacksListener callbacks = Mockito.mock(TaskCallbacksListener.class);
+
+        taskManager.setCallbacksListener(callbacks);
+        taskManager.startScheduling();
+
+        Thread.sleep(100);
+        taskManager.stopScheduling();
+
+
+        final TaskWrapper<?> task = taskPersistence.getTask(taskId); // TODO: use taskmanager
+        assertThat(task).isNotNull();
+        assertThat(taskPersistence.getTaskStatus(taskId))
+                .isNotNull()
+                .isEqualTo(TaskStatus.Success);
+
+        verify(callbacks, times(1)).taskCompleted(any());
+        verify(callbacks, times(0)).taskFailed(any());
+        verify(callbacks, times(0)).taskOverdue(any());
+        verify(callbacks, times(0)).taskCannotBeScheduled(any());
+        verify(callbacks, atLeast(1)).createInstance(any());
 
     }
 

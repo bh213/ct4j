@@ -17,7 +17,6 @@ public class StatusController {
     @Autowired
     public StatusController(TaskManager taskManager) {
         this.taskManager = taskManager;
-
     }
 
     @GetMapping(path = "/", produces = "application/json")
@@ -25,8 +24,5 @@ public class StatusController {
         final Map<String, ExecutionStats> performanceSnapshot = taskManager.getPerformanceSnapshot();
         final ResourceUsage resourceUsage = taskManager.getFreeResourcesEstimate();
         return new StatusResponse(performanceSnapshot,resourceUsage );
-
-
-
     }
 }

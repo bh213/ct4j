@@ -7,15 +7,19 @@ import java.util.List;
 import java.util.Objects;
 
 public abstract class TaskFactoryBase implements TaskFactory {
-    protected List<ClusterTasksCustomFactory> customTaskFactories = new ArrayList<>();
+    private final List<ClusterTasksCustomFactory> customTaskFactories = new ArrayList<>();
 
     @Override
-    public <TASK extends Task> Task createInstance(Class<TASK> taskClass) throws Exception {
+    public synchronized <TASK extends Task> Task createInstance(Class<TASK> taskClass) throws Exception {
         for (ClusterTasksCustomFactory customTaskFactory: customTaskFactories) {
             final Task task = customTaskFactory.createInstance(taskClass);
             if (task != null) return task;
         }
         return null;
+    }
+
+    public synchronized int getCustomTaskFactoriesCount(){
+        return customTaskFactories.size();
     }
 
     @Override

@@ -83,9 +83,11 @@ public class StdTaskManager implements TaskManager {
         TaskCallbacksListener oldCallback = this.callbacksListener;
         if (oldCallback != null) taskFactory.removeCustomTaskFactory(oldCallback);
         this.callbacksListener = callbacksListener;
-        taskFactory.addCustomTaskFactory(callbacksListener);
 
-        scheduler.setCallbackListener(callbacksListener);
+        if (callbacksListener != null) {
+            taskFactory.addCustomTaskFactory(callbacksListener);
+            scheduler.setCallbackListener(callbacksListener);
+        }
         return oldCallback;
     }
 
