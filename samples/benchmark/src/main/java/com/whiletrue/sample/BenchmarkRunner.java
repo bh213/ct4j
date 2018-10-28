@@ -3,7 +3,9 @@ package com.whiletrue.sample;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import com.whiletrue.clustertasks.tasks.BasicTaskInfo;
 import com.whiletrue.clustertasks.tasks.StdTaskRunner;
+import com.whiletrue.clustertasks.tasks.TaskCallbacksListener;
 import com.whiletrue.clustertasks.tasks.TaskManager;
 import com.whiletrue.sample.tasks.EmptyTask;
 import com.whiletrue.sample.tasks.FailingTask;
@@ -40,6 +42,24 @@ public class BenchmarkRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
+
+        taskManager.setCallbacksListener(new TaskCallbacksListener() {
+            @Override
+            public void taskOverdue(BasicTaskInfo task) {
+                log.error("Callback: task overdue id {}, running time {} ms, max running time {} ms", task.getTaskId(), task.getRunningTimeInMs(), task.getMaxRunningTimeInMilliseconds());
+            }
+
+            @Override
+            public void taskCompleted(BasicTaskInfo task) {
+                log.error("Callback: task completed {}", task.getTaskId());
+            }
+
+            @Override
+            public void taskFailed(BasicTaskInfo task) {
+                log.error("Callback: task failed {}", task.getTaskId());
+            }
+        });
+
         if (benchmarkConfigurationProperties.getMode() == BenchmarkConfigurationProperties.BenchmarkMode.NODE) {
             log.info("Running as node, task scheduling enabled");
             taskManager.startScheduling();
@@ -61,6 +81,7 @@ public class BenchmarkRunner implements ApplicationRunner {
 
             log.info("Running as generator, task scheduling disabled");
             taskManager.stopScheduling();
+
         }
 
 

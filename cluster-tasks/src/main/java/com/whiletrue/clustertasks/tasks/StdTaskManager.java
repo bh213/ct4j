@@ -1,6 +1,5 @@
 package com.whiletrue.clustertasks.tasks;
 
-import com.whiletrue.clustertasks.factory.ClusterTasksCustomFactory;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.scheduler.ExecutionStats;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
@@ -18,7 +17,7 @@ public class StdTaskManager implements TaskManager {
     private TaskPersistence taskPersistence;
     private TaskFactory taskFactory;
     private Scheduler scheduler;
-    private TaskPerformanceStatsSnapshot lastPerformanceSnapshot = null;
+    private TaskCallbacksListener callbacksListener;
 
     public StdTaskManager(TaskPersistence taskPersistence, TaskFactory taskFactory, Scheduler scheduler) {
         this.taskPersistence = taskPersistence;
@@ -67,22 +66,28 @@ public class StdTaskManager implements TaskManager {
         return taskPersistence.countPendingTasks();
     }
 
-
     @Override
     public ResourceUsage getFreeResourcesEstimate(){
         return scheduler.getFreeResourcesEstimate();
     }
 
     @Override
-    public void addCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory) {
-        taskFactory.addCustomTaskFactory(customTaskFactory);
+    public TaskCallbacksListener getCallbacksListener() {
+        return callbacksListener;
     }
 
     @Override
-    public void remoteCustomTaskFactory(ClusterTasksCustomFactory customTaskFactory) {
-        taskFactory.removeCustomTaskFactory(customTaskFactory);
-    }
+    public synchronized TaskCallbacksListener setCallbacksListener(TaskCallbacksListener callbacksListener) {
+        log.info("Settings callback listener to {}", callbacksListener);
 
+        TaskCallbacksListener oldCallback = this.callbacksListener;
+        if (oldCallback != null) taskFactory.removeCustomTaskFactory(oldCallback);
+        this.callbacksListener = callbacksListener;
+        taskFactory.addCustomTaskFactory(callbacksListener);
+
+        scheduler.setCallbackListener(callbacksListener);
+        return oldCallback;
+    }
 
 
     @Override
@@ -92,15 +97,6 @@ public class StdTaskManager implements TaskManager {
 
     @Override
     public Map<String, ExecutionStats> getPerformanceSnapshot(){
-
         return scheduler.getPerformanceSnapshot().toMap();
-        /*String retVal = "";
-        if (lastPerformanceSnapshot != null) {
-
-            TaskPerformanceStatsInterval interval = new TaskPerformanceStatsInterval(lastPerformanceSnapshot, currentPerformanceSnapshot);
-            retVal = interval.toTableString();
-        }
-        lastPerformanceSnapshot = currentPerformanceSnapshot;
-        return retVal;*/
     }
 }

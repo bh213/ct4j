@@ -4,10 +4,7 @@ import com.whiletrue.clustertasks.scheduler.ExecutionStats;
 import com.whiletrue.clustertasks.tasks.ResourceUsage;
 import com.whiletrue.clustertasks.tasks.TaskManager;
 import com.whiletrue.sample.BenchmarkConfigurationProperties;
-import com.whiletrue.sample.tasks.EmptyTask;
-import com.whiletrue.sample.tasks.FailingTask;
-import com.whiletrue.sample.tasks.GetUrlTask;
-import com.whiletrue.sample.tasks.SingleFullCpuTask;
+import com.whiletrue.sample.tasks.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +60,7 @@ public class GeneratorController {
         int CPUTasksPerSecond = benchmarkConfigurationProperties.getCPUTasksPerSecond();
         int FailingTasksPerSecond = benchmarkConfigurationProperties.getFailingTasksPerSecond();
         int shortTasksPerSecond = benchmarkConfigurationProperties.getShortTasksPerSecond();
+        int tooLongTasksPerSecond = benchmarkConfigurationProperties.getTooLongTasksPerSecond();
 
 
         StopWatch sw = new StopWatch();
@@ -114,10 +112,21 @@ public class GeneratorController {
 
         });
 
+        IntStream.range(0, tooLongTasksPerSecond).parallel().forEach(i -> {
+
+            try {
+                taskManager.queueTask(TooLongRunningTask.class, "empty");
+                totalTasks.incrementAndGet();
+            } catch (Exception e) {
+                log.error("Error creating TooLongRunning", e);
+            }
+
+        });
+
         sw.stop();
         final long total = sw.getTotalTimeMillis();
         log.info("Task creation: {} tasks took {} ms", totalTasks.get(), total);
-        log.info("Settings: REST:{}, CPU:{}, failing:{}, short:{} per second", RESTTaskPerSecond, CPUTasksPerSecond, FailingTasksPerSecond, shortTasksPerSecond);
+        log.info("Settings: REST:{}, CPU:{}, failing:{}, short:{}, toolong:{} per second", RESTTaskPerSecond, CPUTasksPerSecond, FailingTasksPerSecond, shortTasksPerSecond, tooLongTasksPerSecond);
 
         if (total > 1000) {
 

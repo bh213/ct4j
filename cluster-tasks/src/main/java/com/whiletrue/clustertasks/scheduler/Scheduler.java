@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
@@ -17,8 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Scheduler implements InternalTaskEvents {
 
-
-    public static final String CLUSTER_TASKS_SCHEDULER_THREAD = "ct4j-scheduler";
+    private static final String CLUSTER_TASKS_SCHEDULER_THREAD = "ct4j-scheduler";
     private static Logger log = LoggerFactory.getLogger(Scheduler.class);
     private final Lock lock = new ReentrantLock();
     private final Condition waitingForPolling = lock.newCondition();
@@ -28,18 +29,19 @@ public class Scheduler implements InternalTaskEvents {
     private Thread schedulerThread;
     private ClusterTasksConfig clusterTasksConfig;
     private TaskPerformanceEventsCollector taskPerformanceEventsCollector;
+    private SchedulerCallbackListener callbackListener;
+    private final Executor callbackExecutor;
+
     private Instant lastPollingTime;
     private Instant nextPollingTime;
-
-
 
     public Scheduler(TaskPersistence taskPersistence, TaskRunner taskRunner, ClusterTasksConfig clusterTasksConfig) {
         this.taskPersistence = taskPersistence;
         this.taskRunner = taskRunner;
         this.clusterTasksConfig = clusterTasksConfig;
         this.taskPerformanceEventsCollector = new TaskPerformanceEventsCollector();
+        this.callbackExecutor = Executors.newSingleThreadExecutor();
     }
-
 
     private void schedulerThreadMain() {
         while (isSchedulerThreadRunning.get()) {
@@ -50,6 +52,7 @@ public class Scheduler implements InternalTaskEvents {
                         pollForTasks(calculateNumberOfTasksToAskFor());
                         lastPollingTime = Instant.now();
                         nextPollingTime = null;
+
                     } catch (Exception e) {
                         log.error("Error in scheduler task, pollForTasks", e);
                     }
@@ -57,6 +60,9 @@ public class Scheduler implements InternalTaskEvents {
 
                 final int nextPollingTimeInMilliseconds = getNextPollingTimeInMilliseconds();
                 log.info("next polling {}", nextPollingTimeInMilliseconds);
+
+                overdueTaskCheck();
+
                 lock.lock();
                 try {
                     waitingForPolling.await(nextPollingTimeInMilliseconds, TimeUnit.MILLISECONDS);
@@ -66,12 +72,11 @@ public class Scheduler implements InternalTaskEvents {
                     lock.unlock();
                 }
 
-
             } catch (Exception e) {
                 log.error("Error in schedulerThreadMain", e);
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e1) {
+                } catch (InterruptedException ignored) {
 
                 }
             }
@@ -79,13 +84,30 @@ public class Scheduler implements InternalTaskEvents {
         log.info("Exiting scheduler thread");
     }
 
+    public synchronized void setCallbackListener(SchedulerCallbackListener callbackListener) {
+        this.callbackListener = callbackListener;
+    }
+
+    public synchronized SchedulerCallbackListener getCallbackListener() {
+        return this.callbackListener;
+    }
+
+
+    private void overdueTaskCheck() {
+        if (callbackListener == null) return;
+        final List<BasicTaskInfo> overdueTasks = taskRunner.getOverdueTasks();
+        final SchedulerCallbackListener callbackListener = getCallbackListener();
+
+        for(BasicTaskInfo task : overdueTasks) {
+            callbackExecutor.execute(()->callbackListener.taskOverdue(task));
+        }
+    }
 
     private synchronized boolean hasMinimumPollingTimeElapsed() {
         if (lastPollingTime == null) return true;
         final long sinceLastPollingTime = Duration.between(lastPollingTime, Instant.now()).toMillis();
         return sinceLastPollingTime > clusterTasksConfig.getMinimumPollingTimeMilliseconds();
     }
-
 
     public TaskPerformanceStatsSnapshot getPerformanceSnapshot() {
         return taskPerformanceEventsCollector.getPerformanceSnapshot();
@@ -105,7 +127,6 @@ public class Scheduler implements InternalTaskEvents {
         }
         return clusterTasksConfig.getMaximumPollingTimeMilliseconds();
     }
-
 
     private synchronized void pollForTasks(int maxTasks) {
         try {
@@ -130,7 +151,6 @@ public class Scheduler implements InternalTaskEvents {
                 } else {
                     log.debug("Not enough resources to claim task {}", candidate.getTaskExecutionContext().getTaskId());
                 }
-
             }
 
             if (candidatesAfterResources.size() == 0) {
@@ -183,7 +203,7 @@ public class Scheduler implements InternalTaskEvents {
 
         if (schedulerThread != null) {
             try {
-                schedulerThread.join(100L);
+                schedulerThread.join(500L);
             } catch (InterruptedException e) {
                 schedulerThread.interrupt();
                 schedulerThread = null;
@@ -201,16 +221,12 @@ public class Scheduler implements InternalTaskEvents {
         }
 
         schedulerThread = new Thread(null, this::schedulerThreadMain, CLUSTER_TASKS_SCHEDULER_THREAD);
-        schedulerThread.setPriority(Thread.NORM_PRIORITY);
+        schedulerThread.setPriority(Thread.NORM_PRIORITY); // TODO: higher priority? configurable?
         schedulerThread.setUncaughtExceptionHandler((t, e) -> {
             log.error("scheduler thread caught uncaught exception", e);
+            // TODO: restart?
         });
         schedulerThread.start();
-    }
-
-    @Override
-    public void taskStarted(Class<? extends Task> name, String id) {
-        taskPerformanceEventsCollector.taskStarted(name, id);
     }
 
 
@@ -227,24 +243,29 @@ public class Scheduler implements InternalTaskEvents {
     }
 
     @Override
-    public void taskCompleted(Class<? extends Task> name, String id, int retry, float milliseconds) {
-        taskPerformanceEventsCollector.taskCompleted(name, id, retry, milliseconds);
-        updatePollingTime();
+    public void taskStarted(TaskWrapper<?> taskWrapper) {
+        taskPerformanceEventsCollector.taskStarted(taskWrapper);
 
     }
 
     @Override
-    public void taskError(Class<? extends Task> name, String id, int retry, float milliseconds) {
-        taskPerformanceEventsCollector.taskError(name, id, retry, milliseconds);
+    public void taskCompleted(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
+        taskPerformanceEventsCollector.taskCompleted(taskWrapper, retry, durationMilliseconds);
+        updatePollingTime();
+        if (callbackExecutor != null) callbackExecutor.execute(()->callbackListener.taskCompleted(new BasicTaskInfo(taskWrapper)));
+    }
+
+    @Override
+    public void taskError(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
+        taskPerformanceEventsCollector.taskError(taskWrapper, retry, durationMilliseconds);
         updatePollingTime();
     }
 
-
-
     @Override
-    public void taskFailed(Class<? extends Task> name, String id, int retry) {
-        taskPerformanceEventsCollector.taskFailed(name, id, retry);
+    public void taskFailed(TaskWrapper<?> taskWrapper, int retry) {
+        taskPerformanceEventsCollector.taskFailed(taskWrapper, retry);
         updatePollingTime();
+        if (callbackExecutor != null) callbackExecutor.execute(()->callbackListener.taskFailed(new BasicTaskInfo(taskWrapper)));
     }
 
     public ResourceUsage getFreeResourcesEstimate() {

@@ -17,6 +17,8 @@ public interface TaskPersistence {
 
     void deleteTask(String id);
     void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status);
+//    void setTaskRunning();
+//    void setTaskCancelled();
 
     void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant newScheduledTime);
 

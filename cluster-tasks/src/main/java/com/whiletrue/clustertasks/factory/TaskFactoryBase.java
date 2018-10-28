@@ -25,6 +25,6 @@ public abstract class TaskFactoryBase implements TaskFactory {
 
     @Override
     public synchronized void removeCustomTaskFactory(ClusterTasksCustomFactory customFactory) {
-        customTaskFactories.remove(Objects.requireNonNull(customFactory, "customFactorymust not be null"));
+        customTaskFactories.remove(Objects.requireNonNull(customFactory, "customFactory must not be null"));
     }
 }

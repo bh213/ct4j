@@ -1,6 +1,7 @@
 package com.whiletrue.clustertasks.scheduler;
 
 import com.whiletrue.clustertasks.tasks.Task;
+import com.whiletrue.clustertasks.tasks.TaskWrapper;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -11,11 +12,12 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
     private ExecutionStats totalStats = new ExecutionStats();
 
     @Override
-    public void taskStarted(Class<? extends Task> name, String id) {
+    public void taskStarted(TaskWrapper<?> taskWrapper) {
     }
 
     @Override
-    public synchronized void taskCompleted(Class<? extends Task> name, String id, int retry, float milliseconds) {
+    public synchronized void taskCompleted(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
+        final Class name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskCompleted();
@@ -25,7 +27,8 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
     }
 
     @Override
-    public synchronized void taskError(Class<? extends Task> name, String id, int retry, float milliseconds) {
+    public synchronized void taskError(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
+        final Class name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskError();
@@ -36,7 +39,8 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
     }
 
     @Override
-    public synchronized void taskFailed(Class<? extends Task> name, String id, int retry) {
+    public synchronized void taskFailed(TaskWrapper<?> taskWrapper, int retry) {
+        final Class name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskFailed();

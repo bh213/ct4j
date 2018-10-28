@@ -54,18 +54,29 @@ public class ResourceUsage {
         return customResource2;
     }
 
-    public boolean addIfResourcesAreAvailable(ResourceUsage resourcesToBeUsed){
-        if (resourcesToBeUsed == null) return true;
-        if (this.cpuCoreUsage >= resourcesToBeUsed.cpuCoreUsage &&
-        this.maximumMemoryUsageInMb >= resourcesToBeUsed.maximumMemoryUsageInMb &&
-        this.customResource1 >= resourcesToBeUsed.customResource1 &&
-        this.customResource2 >= resourcesToBeUsed.customResource2) {
-            subtract(resourcesToBeUsed);
+    public boolean addIfResourcesAreAvailable(ResourceUsage taskResources){
+        if (taskResources == null) return true;
+        if (this.cpuCoreUsage >= taskResources.cpuCoreUsage &&
+        this.maximumMemoryUsageInMb >= taskResources.maximumMemoryUsageInMb &&
+        this.customResource1 >= taskResources.customResource1 &&
+        this.customResource2 >= taskResources.customResource2) {
+            subtract(taskResources);
             return true;
         } else return false;
     }
 
-    public void add(ResourceUsage additionalResource) {
+
+    /**
+     * clears all resource values to zero
+     */
+    public void clear() {
+        this.customResource2 = 0;
+        this.customResource1 = 0;
+        this.cpuCoreUsage = 0;
+        this.maximumMemoryUsageInMb = 0;
+    }
+
+    void add(ResourceUsage additionalResource) {
         if (additionalResource == null) return;
         this.cpuCoreUsage += additionalResource.cpuCoreUsage;
         this.maximumMemoryUsageInMb += additionalResource.maximumMemoryUsageInMb;
@@ -73,7 +84,8 @@ public class ResourceUsage {
         this.customResource2 += additionalResource.customResource2;
     }
 
-    public void subtract(ResourceUsage additionalResource) {
+
+    void subtract(ResourceUsage additionalResource) {
         if (additionalResource == null) return;
         this.cpuCoreUsage -= additionalResource.cpuCoreUsage;
         this.maximumMemoryUsageInMb -= additionalResource.maximumMemoryUsageInMb;

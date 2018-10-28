@@ -92,12 +92,12 @@ public class TaskConfig {
             }
         }
 
-/*
+
         public TaskConfigBuilder setMaxRunningtime(int maxRunningTimeInMilliseconds) {
             this.maxRunningTimeInMilliseconds = maxRunningTimeInMilliseconds;
             return this;
         }
-*/
+
 
         public TaskConfigBuilder setMaxRetries(int maxRetries) {
             this.maxRetries = maxRetries;

@@ -8,6 +8,14 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "benchmark")
 public class BenchmarkConfigurationProperties {
 
+    public int getTooLongTasksPerSecond() {
+        return TooLongTasksPerSecond;
+    }
+
+    public void setTooLongTasksPerSecond(int tooLongTasksPerSecond) {
+        TooLongTasksPerSecond = tooLongTasksPerSecond;
+    }
+
     public enum BenchmarkMode {
         NODE,
         GENERATOR
@@ -22,7 +30,7 @@ public class BenchmarkConfigurationProperties {
     private boolean disableTaskLogs = false;
 
     private int RESTTaskPerSecond = 3;
-
+    private int TooLongTasksPerSecond = 1;
     private int CPUTasksPerSecond = 2;
     private int FailingTasksPerSecond = 2;
     private int ShortTasksPerSecond = 100;
