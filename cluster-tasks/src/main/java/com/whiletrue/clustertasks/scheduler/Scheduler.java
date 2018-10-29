@@ -28,7 +28,7 @@ public class Scheduler implements InternalTaskEvents {
     private TaskRunner taskRunner;
     private Thread schedulerThread;
     private ClusterTasksConfig clusterTasksConfig;
-    private TaskPerformanceEventsCollector taskPerformanceEventsCollector;
+    private final TaskPerformanceEventsCollector taskPerformanceEventsCollector;
     private SchedulerCallbackListener callbackListener;
     private final Executor callbackExecutor;
 
@@ -59,7 +59,7 @@ public class Scheduler implements InternalTaskEvents {
                 }
 
                 final int nextPollingTimeInMilliseconds = getNextPollingTimeInMilliseconds();
-                log.info("next polling {}", nextPollingTimeInMilliseconds);
+                log.debug("next polling {}", nextPollingTimeInMilliseconds);
 
                 overdueTaskCheck();
 
@@ -130,7 +130,7 @@ public class Scheduler implements InternalTaskEvents {
 
     private synchronized void pollForTasks(int maxTasks) {
         try {
-            log.debug("Polling for tasks");
+            log.debug("Polling for tasks, maximum {}", maxTasks);
             List<TaskWrapper<?>> candidates = taskPersistence.pollForNextTasks(maxTasks);
             final int tasksCount = candidates.size();
             if (tasksCount == 0) {
@@ -145,11 +145,23 @@ public class Scheduler implements InternalTaskEvents {
             List<TaskWrapper<?>> candidatesAfterResources = new ArrayList<>();
 
             for (TaskWrapper<?> candidate : candidates) {
-                if (currentResourcesAvailable.addIfResourcesAreAvailable(candidate.getTaskConfig().getResourceUsage())){
-                    log.debug("Will try to claim task {}", candidate.getTaskExecutionContext().getTaskId());
+                final ResourceUsage taskResourceUsage = candidate.getTaskConfig().getResourceUsage();
+                if (currentResourcesAvailable.addIfResourcesAreAvailable(taskResourceUsage)){
+                    log.info("Will try to claim task {}", candidate.getTaskExecutionContext().getTaskId());
                     candidatesAfterResources.add(candidate);
                 } else {
-                    log.debug("Not enough resources to claim task {}", candidate.getTaskExecutionContext().getTaskId());
+                    log.info("Not enough resources to claim task {}", candidate.getTaskExecutionContext().getTaskId());
+                    if (!clusterTasksConfig.isSchedulerFitAsManyTaskAsPossible()) {
+
+                        if (clusterTasksConfig.getConfiguredResources().canFit(taskResourceUsage)) {
+                            log.warn("Task {} requires more resources than this node provides. Max: {}, Provided: {}", candidate.getTaskExecutionContext().getTaskId(), clusterTasksConfig.getConfiguredResources(), taskResourceUsage);
+                            if (callbackListener != null) {
+                                callbackExecutor.execute(()->callbackListener.taskCannotBeScheduled(new BasicTaskInfo(candidate)));
+                            }
+                        }
+                        break;
+
+                    }
                 }
             }
 
@@ -231,6 +243,7 @@ public class Scheduler implements InternalTaskEvents {
 
 
     private void updatePollingTime() {
+        if (clusterTasksConfig.isSchedulerPollAfterTaskCompletion()) return;
         lock.lock();
         try {
             waitingForPolling.signal();
@@ -245,14 +258,18 @@ public class Scheduler implements InternalTaskEvents {
     @Override
     public void taskStarted(TaskWrapper<?> taskWrapper) {
         taskPerformanceEventsCollector.taskStarted(taskWrapper);
-
     }
 
     @Override
     public void taskCompleted(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
         taskPerformanceEventsCollector.taskCompleted(taskWrapper, retry, durationMilliseconds);
         updatePollingTime();
-        if (callbackExecutor != null) callbackExecutor.execute(()->callbackListener.taskCompleted(new BasicTaskInfo(taskWrapper)));
+
+        final SchedulerCallbackListener callbackListener = this.callbackListener;
+        if (callbackListener != null) {
+            callbackExecutor.execute(()-> callbackListener.taskCompleted(new BasicTaskInfo(taskWrapper)));
+        }
+
     }
 
     @Override
@@ -265,7 +282,8 @@ public class Scheduler implements InternalTaskEvents {
     public void taskFailed(TaskWrapper<?> taskWrapper, int retry) {
         taskPerformanceEventsCollector.taskFailed(taskWrapper, retry);
         updatePollingTime();
-        if (callbackExecutor != null) callbackExecutor.execute(()->callbackListener.taskFailed(new BasicTaskInfo(taskWrapper)));
+        final SchedulerCallbackListener callbackListener = this.callbackListener;
+        if (callbackListener != null) callbackExecutor.execute(()->callbackListener.taskFailed(new BasicTaskInfo(taskWrapper)));
     }
 
     public ResourceUsage getFreeResourcesEstimate() {

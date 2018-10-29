@@ -174,7 +174,7 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     }
 
     @Override
-    public TaskWrapper<?> getTask(String taskId) {
+    public synchronized TaskWrapper<?> getTask(String taskId) {
         final TaskEntry entry = findTask(Objects.requireNonNull(taskId));
         if (entry == null) return null;
         return createTaskWrapper(entry);

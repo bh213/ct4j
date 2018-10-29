@@ -17,7 +17,7 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
 
     @Override
     public synchronized void taskCompleted(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
-        final Class name = taskWrapper.getTask().getClass();
+        final Class<? extends Task>  name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskCompleted();
@@ -28,7 +28,7 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
 
     @Override
     public synchronized void taskError(TaskWrapper<?> taskWrapper, int retry, float durationMilliseconds) {
-        final Class name = taskWrapper.getTask().getClass();
+        final Class<? extends Task>  name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskError();
@@ -40,7 +40,7 @@ public class TaskPerformanceEventsCollector implements InternalTaskEvents {
 
     @Override
     public synchronized void taskFailed(TaskWrapper<?> taskWrapper, int retry) {
-        final Class name = taskWrapper.getTask().getClass();
+        final Class<? extends Task>  name = taskWrapper.getTask().getClass();
         taskTiming.putIfAbsent(name, new ExecutionStats());
         taskTiming.compute(name, (s, executionStats) -> {
             executionStats.taskFailed();

@@ -5,7 +5,10 @@ import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
 import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
-import com.whiletrue.clustertasks.tasks.*;
+import com.whiletrue.clustertasks.tasks.ClusterTasksConfig;
+import com.whiletrue.clustertasks.tasks.ResourceUsage;
+import com.whiletrue.clustertasks.tasks.TaskPersistence;
+import com.whiletrue.clustertasks.tasks.TaskRunner;
 import config.FixedTimeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,7 +19,6 @@ import org.mockito.Mockito;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 

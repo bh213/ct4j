@@ -17,7 +17,6 @@ plugins {
     id 'eclipse'
     id "io.spring.dependency-management" version "1.0.6.RELEASE"
     id 'maven-publish'
-
 }
 
 dependencyManagement {
@@ -27,8 +26,6 @@ dependencyManagement {
 }
 
 
-
-
 sourceCompatibility = 1.8
 
 repositories {
@@ -36,18 +33,10 @@ repositories {
     jcenter()
 }
 
-/*dependencyManagement {
-    testCompile {
-        dependencies {
-            dependency 'org.springframework:spring-test:5.0.0.RELEASE'
-            dependency 'org.springframework.boot:spring-boot-starter-test:2.0.0.RELEASE'
-        }
-    }
-}*/
-
-
 dependencies {
     implementation project(":cluster-tasks")
+
+    compile  "org.springframework.boot:spring-boot-configuration-processor"
     compileOnly("org.springframework.boot:spring-boot-starter-web")
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
 
@@ -64,6 +53,9 @@ dependencies {
 
     testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: "5.1.1"
 }
+
+
+compileJava.dependsOn(processResources)
 
 test {
     useJUnitPlatform {

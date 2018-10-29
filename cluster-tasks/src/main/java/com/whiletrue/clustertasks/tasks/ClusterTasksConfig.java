@@ -14,7 +14,30 @@ public class ClusterTasksConfig {
     private float defaultRetryBackoffFactor = 1.0f;
 
     private boolean enableQueueTaskShortcut;  // TODO
-    private boolean enableQueueTaskValidation; // TODO
+    private boolean schedulerFitAsManyTaskAsPossible = false;
+    private boolean schedulerIgnoreResourcesForHighestPriorityTask = false;
+    private boolean schedulerPollAfterTaskCompletion = true;
+    private boolean schedulerAdaptivePollingRate = true;
+
+    public boolean isEnableQueueTaskShortcut() {
+        return enableQueueTaskShortcut;
+    }
+
+    public boolean isSchedulerFitAsManyTaskAsPossible() {
+        return schedulerFitAsManyTaskAsPossible;
+    }
+
+    public boolean isSchedulerIgnoreResourcesForHighestPriorityTask() {
+        return schedulerIgnoreResourcesForHighestPriorityTask;
+    }
+
+    public boolean isSchedulerPollAfterTaskCompletion() {
+        return schedulerPollAfterTaskCompletion;
+    }
+
+    public boolean isSchedulerAdaptivePollingRate() {
+        return schedulerAdaptivePollingRate;
+    }
 
     public int getMaxNumberOfTasksPerNode() {
         return maxNumberOfTasksPerNode;
@@ -28,9 +51,9 @@ public class ClusterTasksConfig {
         return instanceCheckinTimeInMilliseconds;
     }
 
-    public ResourceUsage getAvailableResources() {
+    public ResourceUsage getConfiguredResources() {
         return availableResources;
-    }
+    }  // TODO: use this
 
     public int getDefaultRetries() {
         return defaultRetries;
@@ -50,5 +73,15 @@ public class ClusterTasksConfig {
 
     public int getDefaultPriority() {
         return defaultPriority;
+    }
+
+
+    public ClusterTasksConfig() {
+
+        long allocatedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        long presumableFreeMemory = Runtime.getRuntime().maxMemory() - allocatedMemory;
+
+        this.availableResources = new ResourceUsage(Runtime.getRuntime().availableProcessors(), presumableFreeMemory / 1000000.0f, "custom resource 1", 100, "custom resource 2", 100);
+
     }
 }

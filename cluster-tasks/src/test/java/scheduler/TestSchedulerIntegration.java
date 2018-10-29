@@ -18,7 +18,9 @@ import tasks.NoOpTestTask;
 import java.time.Instant;
 import java.util.ArrayList;
 
+import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.mockito.Mockito.when;
 
 
@@ -86,27 +88,27 @@ public class TestSchedulerIntegration {
     }
 
 
-
-
-
-
     @Test
     @DisplayName("test multiple tasks")
     public void testMultipleTasksTask() throws Exception {
         ArrayList<String> tasks = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 200; i++) {
             final String taskId = taskPersistence.queueTask(new NoOpTestTask(), "very valid string");
             tasks.add(taskId);
         }
 
         scheduler.startScheduling();
-        Thread.sleep(500);
+
+        assertTimeout(ofSeconds(3), () -> {
+                    while (taskPersistence.countPendingTasks() > 0) {
+                        Thread.sleep(100);
+                    }
+                });
         scheduler.stopScheduling();
 
         for (String taskId : tasks) {
             final TaskWrapper<?> task = taskPersistence.getTask(taskId);
             assertThat(task).isNotNull();
-
 
             assertThat(taskPersistence.getTaskStatus(taskId))
                     .isNotNull()

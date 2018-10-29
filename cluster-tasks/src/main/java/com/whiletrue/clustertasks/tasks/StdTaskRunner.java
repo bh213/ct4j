@@ -34,16 +34,14 @@ public class StdTaskRunner implements TaskRunner {
         this.timeProvider = timeProvider;
         this.currentlyExecutingTasksList = new LinkedList<>();
 
-        long allocatedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        long presumableFreeMemory = Runtime.getRuntime().maxMemory() - allocatedMemory;
+        this.currentResourceUsage = new ResourceUsage(clusterTasksConfig.getConfiguredResources());
 
-        this.currentResourceUsage = new ResourceUsage(Runtime.getRuntime().availableProcessors(), presumableFreeMemory / 1000000.0f);
-        log.info("Estimated available resources: {}", this.currentResourceUsage); // TODO: move to initial banner?
+        log.info("Estimated configured resources: {}", this.currentResourceUsage); // TODO: move to initial banner?
     }
 
 
     @Override
-    public <INPUT> void executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents) {
+    public <INPUT> CompletableFuture<TaskStatus> executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents) {
 
         final Task<INPUT> task = taskWrapper.getTask();
         final INPUT input = taskWrapper.getInput();
@@ -113,6 +111,7 @@ public class StdTaskRunner implements TaskRunner {
                 return true;
             }
         });
+        return future;
     }
 
 

@@ -68,7 +68,7 @@ public class TaskConfig {
         private int retryDelay;
         private float retryBackoffFactor;
         private boolean tryToRunRetryOnDifferentNode = false; // TODO
-        private float estimatedCpuCoresUsage = 1.0f;
+        private float estimatedCpuCoresUsage = 0.0f;
         private float memoryUsageInMb = 1.0f; // TODO: too much?
         private int maximumNumberOfConcurrentTasksOfThisType = -1;
         private String taskName;

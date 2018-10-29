@@ -54,12 +54,16 @@ public class ResourceUsage {
         return customResource2;
     }
 
+    public boolean canFit(ResourceUsage wantedResources) {
+        return this.cpuCoreUsage >= wantedResources.cpuCoreUsage &&
+                this.maximumMemoryUsageInMb >= wantedResources.maximumMemoryUsageInMb &&
+                this.customResource1 >= wantedResources.customResource1 &&
+                this.customResource2 >= wantedResources.customResource2;
+    }
+
     public boolean addIfResourcesAreAvailable(ResourceUsage taskResources){
         if (taskResources == null) return true;
-        if (this.cpuCoreUsage >= taskResources.cpuCoreUsage &&
-        this.maximumMemoryUsageInMb >= taskResources.maximumMemoryUsageInMb &&
-        this.customResource1 >= taskResources.customResource1 &&
-        this.customResource2 >= taskResources.customResource2) {
+        if (canFit(taskResources)) {
             subtract(taskResources);
             return true;
         } else return false;
