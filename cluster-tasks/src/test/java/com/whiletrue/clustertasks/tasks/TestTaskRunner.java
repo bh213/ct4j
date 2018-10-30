@@ -84,9 +84,9 @@ public class TestTaskRunner {
     @DisplayName("Test task StdTaskRunner retry handling")
     @ParameterizedTest
     @CsvSource(
-            { "5, 5, true, false, 0",
-             "5, 3, false, true, 16000",
-             "3, 0, false, true, 2000"
+            { "5, 5, true, false, 0",    // retry # 5 out of 5 -> task failed
+             "5, 3, false, true, 16000", // retry # 3 out of 5, delay 2000ms, backoff 2.0-> retry in 2^3 * 2000 ms
+             "3, 0, false, true, 2000"   // retry # 0 out of 5, delay 2000ms, backoff 2.0-> retry in 2^0 * 2000 ms
             })
     public void testTaskRetry(int defaultRetry, int retryAttempt, boolean failed, boolean persistenceRetry, int delay) throws Exception {
 
