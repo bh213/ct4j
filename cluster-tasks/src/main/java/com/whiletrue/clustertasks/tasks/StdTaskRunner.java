@@ -15,7 +15,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
- *  StdTaskRunner runs Tasks on configured threadpool, tracks resource usage and handles exceptions.
+ * StdTaskRunner runs Tasks on configured threadpool, tracks resource usage and handles exceptions.
  */
 public class StdTaskRunner implements TaskRunner {
 
@@ -87,7 +87,6 @@ public class StdTaskRunner implements TaskRunner {
                 internalTaskEvents.taskError(taskWrapper, taskExecutionContext.getRetry(), duration / 1000000.0f);
 
 
-
                 RetryPolicy newRetryPolicy = null;
                 try {
                     newRetryPolicy = task.onError(input, taskException, taskConfig.getRetryPolicy());
@@ -105,7 +104,7 @@ public class StdTaskRunner implements TaskRunner {
             }
         });
         future.handleAsync((taskStatus, throwable) -> {
-            synchronized(this) {
+            synchronized (this) {
                 currentlyExecutingTasksList.remove(taskWrapper);
                 currentResourceUsage.add(taskWrapper.getTaskConfig().getResourceUsage()); // task has completed, return resources to task runner
                 return true;
@@ -135,7 +134,7 @@ public class StdTaskRunner implements TaskRunner {
         return new ResourceUsage(currentResourceUsage);
     }
 
-    private <INPUT> void handleRetry(TaskWrapper<INPUT> taskWrapper, RetryPolicy retryPolicy, TaskExecutionContext taskExecutionContext, InternalTaskEvents internalTaskEvents) {
+    <INPUT> void handleRetry(TaskWrapper<INPUT> taskWrapper, RetryPolicy retryPolicy, TaskExecutionContext taskExecutionContext, InternalTaskEvents internalTaskEvents) {
 
         final int maxRetries = retryPolicy == null ? clusterTasksConfig.getDefaultRetries() : retryPolicy.getMaxRetries();
         final int retryDelay = retryPolicy == null ? clusterTasksConfig.getDefaultRetryDelay() : retryPolicy.getRetryDelay();
