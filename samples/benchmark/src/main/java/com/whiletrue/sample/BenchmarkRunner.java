@@ -51,7 +51,7 @@ public class BenchmarkRunner implements ApplicationRunner {
 
             @Override
             public void taskCompleted(BasicTaskInfo task) {
-                log.error("Callback: task completed {}", task.getTaskId());
+                log.info("Callback: task completed {}", task.getTaskId());
             }
 
             @Override

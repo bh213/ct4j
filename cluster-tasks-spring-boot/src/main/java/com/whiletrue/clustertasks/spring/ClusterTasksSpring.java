@@ -11,7 +11,6 @@ import com.whiletrue.clustertasks.spring.JPA.JpaClusterTaskPersistence;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.instanceid.NetworkClusterInstance;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
-import com.whiletrue.clustertasks.scheduler.InternalTaskEvents;
 import com.whiletrue.clustertasks.timeprovider.LocalTimeProvider;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
@@ -19,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +45,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
     private BeanFactory beanFactory;
 
 
+    @Autowired
     public ClusterTasksSpring( ClusterTasksConfigurationProperties configurationProperties) {
         this.configurationProperties = configurationProperties;
     }
@@ -56,7 +57,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
             case "local" : this.timeProvider = new LocalTimeProvider(); break;
             default: {
                 try {
-                    Class clazz = Class.forName(configurationProperties.getTaskFactory());
+                    Class<?> clazz = Class.forName(configurationProperties.getTaskFactory());
                     this.timeProvider  = (TimeProvider) this.beanFactory.getBean(clazz);
                 } catch (ClassNotFoundException e) {
                     throw new IllegalArgumentException("ct4j: timeProvider class could not be found", e);
@@ -69,7 +70,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
             case "spring" : this.taskFactory = this.beanFactory.getBean(SpringTaskFactory.class); break;
             default: {
                 try {
-                    Class clazz = Class.forName(configurationProperties.getTaskFactory());
+                    Class<?> clazz = Class.forName(configurationProperties.getTaskFactory());
                     this.taskFactory  = (TaskFactory) this.beanFactory.getBean(clazz);
                 } catch (ClassNotFoundException e) {
                     throw new IllegalArgumentException("ct4j: taskFactory class could not be found", e);
@@ -77,7 +78,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
             }
         }
 
-        clusterTasksConfig = new ClusterTasksConfig();
+        clusterTasksConfig = new ClusterTasksConfigImpl();
         ClusterInstance clusterInstance = new NetworkClusterInstance();
 
         switch(configurationProperties.getPersistence()) {
@@ -90,7 +91,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
             }
             default: {
                 try {
-                    Class clazz = Class.forName(configurationProperties.getPersistence());
+                    Class<?> clazz = Class.forName(configurationProperties.getPersistence());
                     this.clusterTaskPersistence  = (TaskPersistence) this.beanFactory.getBean(clazz);
                 } catch (ClassNotFoundException e) {
                     throw new IllegalArgumentException("ct4j: persistence class could not be found", e);
@@ -104,7 +105,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
     public TaskManager getTaskManager(){
 
         TaskRunner taskRunner = new StdTaskRunner(clusterTaskPersistence, clusterTasksConfig, timeProvider);
-        Scheduler scheduler = new Scheduler(clusterTaskPersistence, taskRunner, clusterTasksConfig);
+        Scheduler scheduler = new Scheduler(clusterTaskPersistence, taskRunner, clusterTasksConfig, timeProvider);
         TaskManager taskManager = new StdTaskManager(clusterTaskPersistence, taskFactory, scheduler);
 
         log.info("\n"+

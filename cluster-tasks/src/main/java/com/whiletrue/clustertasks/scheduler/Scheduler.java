@@ -1,6 +1,7 @@
 package com.whiletrue.clustertasks.scheduler;
 
 import com.whiletrue.clustertasks.tasks.*;
+import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,23 +25,28 @@ public class Scheduler implements InternalTaskEvents {
     private final Lock lock = new ReentrantLock();
     private final Condition waitingForPolling = lock.newCondition();
     private final AtomicBoolean isSchedulerThreadRunning = new AtomicBoolean(false);
+    private final TaskPerformanceEventsCollector taskPerformanceEventsCollector;
+    private final Executor callbackExecutor;
     private TaskPersistence taskPersistence;
     private TaskRunner taskRunner;
     private Thread schedulerThread;
     private ClusterTasksConfig clusterTasksConfig;
-    private final TaskPerformanceEventsCollector taskPerformanceEventsCollector;
     private SchedulerCallbackListener callbackListener;
-    private final Executor callbackExecutor;
-
     private Instant lastPollingTime;
     private Instant nextPollingTime;
+    private TimeProvider timeProvider;
 
-    public Scheduler(TaskPersistence taskPersistence, TaskRunner taskRunner, ClusterTasksConfig clusterTasksConfig) {
+    public Scheduler(TaskPersistence taskPersistence, TaskRunner taskRunner, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
         this.taskPersistence = taskPersistence;
         this.taskRunner = taskRunner;
         this.clusterTasksConfig = clusterTasksConfig;
+        this.timeProvider = timeProvider;
         this.taskPerformanceEventsCollector = new TaskPerformanceEventsCollector();
         this.callbackExecutor = Executors.newSingleThreadExecutor();
+    }
+
+    public Instant getNextPollingTime() {
+        return nextPollingTime;
     }
 
     private void schedulerThreadMain() {
@@ -50,7 +56,7 @@ public class Scheduler implements InternalTaskEvents {
                 if (hasMinimumPollingTimeElapsed()) {
                     try {
                         pollForTasks(calculateNumberOfTasksToAskFor());
-                        lastPollingTime = Instant.now();
+                        lastPollingTime = timeProvider.getCurrent();
                         nextPollingTime = null;
 
                     } catch (Exception e) {
@@ -84,28 +90,27 @@ public class Scheduler implements InternalTaskEvents {
         log.info("Exiting scheduler thread");
     }
 
-    public synchronized void setCallbackListener(SchedulerCallbackListener callbackListener) {
-        this.callbackListener = callbackListener;
-    }
-
     public synchronized SchedulerCallbackListener getCallbackListener() {
         return this.callbackListener;
     }
 
+    public synchronized void setCallbackListener(SchedulerCallbackListener callbackListener) {
+        this.callbackListener = callbackListener;
+    }
 
     private void overdueTaskCheck() {
         if (callbackListener == null) return;
         final List<BasicTaskInfo> overdueTasks = taskRunner.getOverdueTasks();
         final SchedulerCallbackListener callbackListener = getCallbackListener();
 
-        for(BasicTaskInfo task : overdueTasks) {
-            callbackExecutor.execute(()->callbackListener.taskOverdue(task));
+        for (BasicTaskInfo task : overdueTasks) {
+            callbackExecutor.execute(() -> callbackListener.taskOverdue(task));
         }
     }
 
     private synchronized boolean hasMinimumPollingTimeElapsed() {
         if (lastPollingTime == null) return true;
-        final long sinceLastPollingTime = Duration.between(lastPollingTime, Instant.now()).toMillis();
+        final long sinceLastPollingTime = Duration.between(lastPollingTime, timeProvider.getCurrent()).toMillis();
         return sinceLastPollingTime > clusterTasksConfig.getMinimumPollingTimeMilliseconds();
     }
 
@@ -119,7 +124,7 @@ public class Scheduler implements InternalTaskEvents {
 
     private synchronized int getNextPollingTimeInMilliseconds() {
         if (nextPollingTime != null) {
-            final Instant now = Instant.now();
+            final Instant now = timeProvider.getCurrent();
             if (nextPollingTime.isBefore(now)) return 1;
 
             final int tillNextForcedPoll = (int) Duration.between(now, nextPollingTime).toMillis();
@@ -128,7 +133,7 @@ public class Scheduler implements InternalTaskEvents {
         return clusterTasksConfig.getMaximumPollingTimeMilliseconds();
     }
 
-    private synchronized void pollForTasks(int maxTasks) {
+    synchronized void pollForTasks(int maxTasks) {
         try {
             log.debug("Polling for tasks, maximum {}", maxTasks);
             List<TaskWrapper<?>> candidates = taskPersistence.pollForNextTasks(maxTasks);
@@ -146,7 +151,7 @@ public class Scheduler implements InternalTaskEvents {
 
             for (TaskWrapper<?> candidate : candidates) {
                 final ResourceUsage taskResourceUsage = candidate.getTaskConfig().getResourceUsage();
-                if (currentResourcesAvailable.addIfResourcesAreAvailable(taskResourceUsage)){
+                if (currentResourcesAvailable.addIfResourcesAreAvailable(taskResourceUsage)) {
                     log.info("Will try to claim task {}", candidate.getTaskExecutionContext().getTaskId());
                     candidatesAfterResources.add(candidate);
                 } else {
@@ -156,7 +161,7 @@ public class Scheduler implements InternalTaskEvents {
                         if (clusterTasksConfig.getConfiguredResources().canFit(taskResourceUsage)) {
                             log.warn("Task {} requires more resources than this node provides. Max: {}, Provided: {}", candidate.getTaskExecutionContext().getTaskId(), clusterTasksConfig.getConfiguredResources(), taskResourceUsage);
                             if (callbackListener != null) {
-                                callbackExecutor.execute(()->callbackListener.taskCannotBeScheduled(new BasicTaskInfo(candidate)));
+                                callbackExecutor.execute(() -> callbackListener.taskCannotBeScheduled(new BasicTaskInfo(candidate)));
                             }
                         }
                         break;
@@ -243,7 +248,7 @@ public class Scheduler implements InternalTaskEvents {
 
 
     private void updatePollingTime() {
-        if (clusterTasksConfig.isSchedulerPollAfterTaskCompletion()) return;
+        if (!clusterTasksConfig.isSchedulerPollAfterTaskCompletion()) return;
         lock.lock();
         try {
             waitingForPolling.signal();
@@ -251,7 +256,7 @@ public class Scheduler implements InternalTaskEvents {
             lock.unlock();
         }
         if (nextPollingTime == null) synchronized (this) {
-            nextPollingTime = Instant.now().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
+            nextPollingTime = timeProvider.getCurrent().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
         }
     }
 
@@ -267,7 +272,7 @@ public class Scheduler implements InternalTaskEvents {
 
         final SchedulerCallbackListener callbackListener = this.callbackListener;
         if (callbackListener != null) {
-            callbackExecutor.execute(()-> callbackListener.taskCompleted(new BasicTaskInfo(taskWrapper)));
+            callbackExecutor.execute(() -> callbackListener.taskCompleted(new BasicTaskInfo(taskWrapper)));
         }
 
     }
@@ -283,7 +288,8 @@ public class Scheduler implements InternalTaskEvents {
         taskPerformanceEventsCollector.taskFailed(taskWrapper, retry);
         updatePollingTime();
         final SchedulerCallbackListener callbackListener = this.callbackListener;
-        if (callbackListener != null) callbackExecutor.execute(()->callbackListener.taskFailed(new BasicTaskInfo(taskWrapper)));
+        if (callbackListener != null)
+            callbackExecutor.execute(() -> callbackListener.taskFailed(new BasicTaskInfo(taskWrapper)));
     }
 
     public ResourceUsage getFreeResourcesEstimate() {
