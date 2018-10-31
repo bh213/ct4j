@@ -1,4 +1,12 @@
-[![](https://jitpack.io/v/bh213/ct4j.svg)](https://jitpack.io/#bh213/ct4j)
+
+
+ [![](https://jitpack.io/v/bh213/ct4j.svg)](https://jitpack.io/#bh213/ct4j)  &nbsp; 
+ ![Travis (.org)](https://img.shields.io/travis/bh213/ct4j.svg)
+
+
+
+
+
 
 
 cluster tasks for java (CT4j)  
