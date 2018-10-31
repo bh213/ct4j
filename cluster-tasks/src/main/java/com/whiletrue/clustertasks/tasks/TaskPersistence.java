@@ -27,6 +27,13 @@ public interface TaskPersistence {
     TaskStatus getTaskStatus(String taskId);
     long countPendingTasks();
 
+
+    /**
+     *
+     * @return TaskClusterPersistence instance if task is clustered (@see isClustered() returns true)
+     */
+    TaskClusterPersistence getClustered();
+
     /**
      *
      * @return true if this persistence supports cluster and false if it does not

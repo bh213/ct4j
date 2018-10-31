@@ -31,9 +31,7 @@ public class TestTaskRunner {
     void init() {
         taskPersistence = Mockito.mock(TaskPersistence.class);
         internalEvents = Mockito.mock(InternalTaskEvents.class);
-
     }
-
 
     @Test
     @DisplayName("Execute simple task")

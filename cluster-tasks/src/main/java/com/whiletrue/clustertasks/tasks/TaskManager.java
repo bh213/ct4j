@@ -1,9 +1,11 @@
 package com.whiletrue.clustertasks.tasks;
 
+import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.scheduler.ExecutionStats;
 import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsInterval;
 import com.whiletrue.clustertasks.scheduler.TaskPerformanceStatsSnapshot;
 
+import java.util.List;
 import java.util.Map;
 
 public interface TaskManager {
@@ -82,6 +84,8 @@ public interface TaskManager {
 
     TaskCallbacksListener setCallbacksListener(TaskCallbacksListener callbacksListener);
 
+
+    List<ClusterInstance> getClusterInstances();
 
     /**
      *

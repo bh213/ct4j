@@ -31,4 +31,6 @@ public interface ClusterTasksConfig {
 
 
     int getDefaultPriority();
+
+    int getCheckInFailureIntervalMultiplier();
 }

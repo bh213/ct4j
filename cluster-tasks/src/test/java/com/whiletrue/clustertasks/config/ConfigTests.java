@@ -2,7 +2,7 @@ package com.whiletrue.clustertasks.config;
 
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,18 +18,18 @@ public class ConfigTests {
 
     private ClusterTasksConfig clusterTasksConfig;
     private InMemoryTaskPersistence taskPersistence;
-    private ClusterInstance clusterInstance;
+    private ClusterInstanceNaming clusterInstanceNaming;
     private TaskFactory taskFactory;
 
 
     @BeforeEach
     void init() {
-        clusterInstance = Mockito.mock(ClusterInstance.class);
-        when(clusterInstance.getInstanceId()).thenReturn("myclusterinstance");
+        clusterInstanceNaming = Mockito.mock(ClusterInstanceNaming.class);
+        when(clusterInstanceNaming.getInstanceId()).thenReturn("myclusterinstance");
         taskFactory = Mockito.mock(TaskFactory.class);
 
         clusterTasksConfig = new ClusterTasksConfigImpl();
-        taskPersistence = new InMemoryTaskPersistence(clusterInstance, taskFactory, clusterTasksConfig, new FixedTimeProvider());
+        taskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, clusterTasksConfig, new FixedTimeProvider());
     }
 
 

@@ -18,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TestPerformanceStats {
 
-
     @Test
     @DisplayName("Test snapshot creation and proper cloning of data")
     public void testPerformanceStatsCreationAndClone() {
@@ -27,7 +26,6 @@ public class TestPerformanceStats {
         final ExecutionStats totalStats = new ExecutionStats(33, 34, 35, 36);
 
         init.put(NoOpTestTask.class, initSource);
-
 
         final Instant now = Instant.now();
         TaskPerformanceStatsSnapshot snapshot = new TaskPerformanceStatsSnapshot(init, totalStats, now);
@@ -49,10 +47,7 @@ public class TestPerformanceStats {
         assertThat(snapshot.getPerTaskStats().get(NoOpTestTask.class).getExecutions()).isEqualTo(1);
         assertThat(snapshot.getPerTaskStats().get(NoOpTestTask.class).getSuccess()).isEqualTo(3);
         assertThat(snapshot.getPerTaskStats().get(NoOpTestTask.class).getFailures()).isEqualTo(4);
-
-
     }
-
 
     @Test
     @DisplayName("Test interval creation and proper cloning of data")

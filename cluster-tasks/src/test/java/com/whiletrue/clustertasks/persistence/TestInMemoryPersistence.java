@@ -3,7 +3,7 @@ package com.whiletrue.clustertasks.persistence;
 
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.ClusterTasksConfigImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +21,11 @@ public class TestInMemoryPersistence extends TestPersistenceBase{
 
     @BeforeEach
     void init() {
-        clusterInstance = Mockito.mock(ClusterInstance.class);
-        when(clusterInstance.getInstanceId()).thenReturn("myclusterinstance");
+        clusterInstanceNaming = Mockito.mock(ClusterInstanceNaming.class);
+        when(clusterInstanceNaming.getInstanceId()).thenReturn("myclusterinstance");
         taskFactory = Mockito.mock(TaskFactory.class);
         fixedTimeProvider.setCurrent(Instant.now());
-        taskPersistence = new InMemoryTaskPersistence(clusterInstance, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
+        taskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
     }
 }
 

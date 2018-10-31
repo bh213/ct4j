@@ -1,7 +1,7 @@
 package com.whiletrue.clustertasks.inmemory;
 
 import com.whiletrue.clustertasks.factory.TaskFactory;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
@@ -15,15 +15,15 @@ import static java.util.Collections.reverseOrder;
 
 public class InMemoryTaskPersistence implements TaskPersistence {
     private static Logger log = LoggerFactory.getLogger(InMemoryTaskPersistence.class);
-    private ClusterInstance clusterInstance;
+    private ClusterInstanceNaming clusterInstanceNaming;
     private TaskFactory taskFactory;
     private List<TaskEntry> tasksInQueue;
     private PriorityQueue<TaskEntry> waitingTasks;
     private ClusterTasksConfig clusterTasksConfig;
     private TimeProvider timeProvider;
 
-    public InMemoryTaskPersistence(ClusterInstance clusterInstance, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
-        this.clusterInstance = clusterInstance;
+    public InMemoryTaskPersistence(ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
+        this.clusterInstanceNaming = clusterInstanceNaming;
         this.taskFactory = taskFactory;
         this.clusterTasksConfig = clusterTasksConfig;
         this.timeProvider = timeProvider;
@@ -41,7 +41,7 @@ public class InMemoryTaskPersistence implements TaskPersistence {
             taskEntry.startTime = null;
             throw new RuntimeException(e);
         }
-        final TaskExecutionContext taskExecutionContext = new TaskExecutionContext(taskEntry.retryCount, clusterInstance.getInstanceId(), taskEntry.taskId, taskEntry.name);
+        final TaskExecutionContext taskExecutionContext = new TaskExecutionContext(taskEntry.retryCount, clusterInstanceNaming.getInstanceId(), taskEntry.taskId, taskEntry.name);
 
         return new TaskWrapper(instance, taskEntry.input, taskExecutionContext, taskEntry.lastUpdated, taskEntry.taskConfig);
     }
@@ -190,6 +190,11 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     @Override
     public synchronized long countPendingTasks() {
         return tasksInQueue.size();
+    }
+
+    @Override
+    public TaskClusterPersistence getClustered() {
+        return null;
     }
 
     @Override

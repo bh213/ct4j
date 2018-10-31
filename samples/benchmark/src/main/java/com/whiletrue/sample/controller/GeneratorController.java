@@ -1,5 +1,6 @@
 package com.whiletrue.sample.controller;
 
+import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.scheduler.ExecutionStats;
 import com.whiletrue.clustertasks.tasks.ResourceUsage;
 import com.whiletrue.clustertasks.tasks.TaskManager;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
@@ -135,6 +137,24 @@ public class GeneratorController {
 
         final long pendingTasks = taskManager.countPendingTasks();
         log.info("Pending tasks = {}", pendingTasks);
+
+        final List<ClusterInstance> clusterInstances = taskManager.getClusterInstances();
+        if (clusterInstances == null) {
+            log.info("No cluster instances");
+        } else {
+
+            StringBuilder sb = new StringBuilder("Cluster instances:\n");
+            for (ClusterInstance clusterInstance : clusterInstances) {
+                sb.append(clusterInstance.toString());
+                sb.append("\n");
+            }
+
+            log.info(sb.toString());
+        }
+
+
+
+
 
     }
 }

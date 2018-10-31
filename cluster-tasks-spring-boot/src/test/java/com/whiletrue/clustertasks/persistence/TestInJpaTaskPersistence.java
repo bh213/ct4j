@@ -2,7 +2,7 @@ package com.whiletrue.clustertasks.persistence;
 
 
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.spring.JPA.ClusterInstanceRepository;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskEntity;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskRepository;
@@ -48,11 +48,11 @@ public class TestInJpaTaskPersistence extends TestPersistenceBase {
 
     @BeforeEach
     void init() {
-        clusterInstance = Mockito.mock(ClusterInstance.class);
-        when(clusterInstance.getInstanceId()).thenReturn("myclusterinstance");
+        clusterInstanceNaming = Mockito.mock(ClusterInstanceNaming.class);
+        when(clusterInstanceNaming.getInstanceId()).thenReturn("myclusterinstance");
         taskFactory = new SpringTaskFactory(applicationContext);
         fixedTimeProvider.setCurrent(Instant.now());
-        taskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstance, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
+        taskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstanceNaming, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
     }
 
     @SpringBootApplication

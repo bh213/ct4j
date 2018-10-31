@@ -4,8 +4,6 @@ allprojects {
     buildDir = "${project.rootDir}/build/${rootProject.name}/${project.name}"
 }
 
-
-
 wrapper {
     gradleVersion = '4.10.2'
 }
@@ -14,11 +12,7 @@ def isReleaseBuild() {
     return version.contains("SNAPSHOT") == false
 }
 
-
-
 subprojects {
-
-
     tasks.withType(Test) {
 
         afterSuite { desc, result ->

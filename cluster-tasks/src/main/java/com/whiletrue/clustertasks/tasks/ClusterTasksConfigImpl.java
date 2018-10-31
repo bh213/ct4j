@@ -8,14 +8,16 @@ public class ClusterTasksConfigImpl implements ClusterTasksConfig {
     public static final int DEFAULT_RETRIES = 3;
     public static final int DEFAULT_RETRY_DELAY = 1000;
     public static final float DEFAULT_RETRY_BACKOFF_FACTOR = 1.0f;
-    public final int DEFAULT_PRIORITY = 1000;
+    public static final int CLUSTER_INSTANCE_CHECKIN_TIME_IN_MILLISECONDS = 5000;
+    public static final int DEFAULT_PRIORITY = 1000;
+    public static final int CHECK_IN_FAILURE_INTERVAL_MULTIPLIER = 3;
 
     private int defaultPriority = DEFAULT_PRIORITY;
     private int maxNumberOfTasksPerNode = MAXIMUM_NUMBER_OF_TASKS_PER_NODE;
     private int maximumPollingTimeMilliseconds = MAXIMUM_POLLING_TIME_MILLISECONDS;
     private int minimumPollingTimeMilliseconds = MINIMUM_POLLING_TIME_MILLISECONDS;
 
-    private int instanceCheckinTimeInMilliseconds = 500;
+    private int instanceCheckinTimeInMilliseconds = CLUSTER_INSTANCE_CHECKIN_TIME_IN_MILLISECONDS;
     private ResourceUsage availableResources;
     private int defaultRetries = DEFAULT_RETRIES;
     private int defaultRetryDelay = DEFAULT_RETRY_DELAY;
@@ -26,6 +28,7 @@ public class ClusterTasksConfigImpl implements ClusterTasksConfig {
     private boolean schedulerIgnoreResourcesForHighestPriorityTask = false;
     private boolean schedulerPollAfterTaskCompletion = true;
     private boolean schedulerAdaptivePollingRate = true;
+    private int checkInFailureIntervalMultiplier = CHECK_IN_FAILURE_INTERVAL_MULTIPLIER;
 
     public ClusterTasksConfigImpl() {
 
@@ -156,6 +159,15 @@ public class ClusterTasksConfigImpl implements ClusterTasksConfig {
     @Override
     public int getDefaultPriority() {
         return defaultPriority;
+    }
+
+    @Override
+    public int getCheckInFailureIntervalMultiplier() {
+        return checkInFailureIntervalMultiplier;
+    }
+
+    public void setCheckInFailureIntervalMultiplier(int checkInFailureIntervalMultiplier) {
+        this.checkInFailureIntervalMultiplier = checkInFailureIntervalMultiplier;
     }
 
     public void setDefaultPriority(int defaultPriority) {

@@ -1,5 +1,6 @@
 package com.whiletrue.clustertasks.scheduler;
 
+import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
@@ -21,15 +22,19 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Scheduler implements InternalTaskEvents {
 
     private static final String CLUSTER_TASKS_SCHEDULER_THREAD = "ct4j-scheduler";
+    private static final String CLUSTER_TASKS_CHECKIN_THREAD = "ct4j-checkin";
     private static Logger log = LoggerFactory.getLogger(Scheduler.class);
-    private final Lock lock = new ReentrantLock();
-    private final Condition waitingForPolling = lock.newCondition();
+    private final Lock schedulerLock = new ReentrantLock();
+    private final Lock checkInLock = new ReentrantLock();
+    private final Condition waitingForPolling = schedulerLock.newCondition();
+    private final Condition waitingForClusterCheckIn = checkInLock.newCondition();
     private final AtomicBoolean isSchedulerThreadRunning = new AtomicBoolean(false);
     private final TaskPerformanceEventsCollector taskPerformanceEventsCollector;
     private final Executor callbackExecutor;
     private TaskPersistence taskPersistence;
     private TaskRunner taskRunner;
     private Thread schedulerThread;
+    private Thread checkinThread;
     private ClusterTasksConfig clusterTasksConfig;
     private SchedulerCallbackListener callbackListener;
     private Instant lastPollingTime;
@@ -69,13 +74,13 @@ public class Scheduler implements InternalTaskEvents {
 
                 overdueTaskCheck();
 
-                lock.lock();
+                schedulerLock.lock();
                 try {
                     waitingForPolling.await(nextPollingTimeInMilliseconds, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
                     log.debug("scheduler thread interrupted", e); // TODO: Remove this
                 } finally {
-                    lock.unlock();
+                    schedulerLock.unlock();
                 }
 
             } catch (Exception e) {
@@ -90,6 +95,46 @@ public class Scheduler implements InternalTaskEvents {
         log.info("Exiting scheduler thread");
     }
 
+
+
+    private void schedulerClusterCheckinThread() {
+
+        if (!taskPersistence.isClustered()) {
+            log.error("cluster checkin should only be enabled when persistence is clustered");
+            return;
+        }
+
+        // TODO: specify db connection properties (transactions off and such?)
+        final TaskClusterPersistence clustered = taskPersistence.getClustered();
+        while (isSchedulerThreadRunning.get()) {
+
+            try {
+                try {
+
+                    log.info("Cluster check-in");
+                    checkInLock.lock();
+                    clustered.instanceCheckIn();
+                    try {
+                        waitingForClusterCheckIn.await(clusterTasksConfig.getInstanceCheckinTimeInMilliseconds(), TimeUnit.MILLISECONDS);
+                    } finally {
+                        checkInLock.unlock();
+                    }
+                } catch (InterruptedException e) {
+                    log.debug("check-in thread interrupted", e);
+                }
+
+            } catch (Exception e) {
+                log.error("Error in schedulerClusterCheckinThread", e);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+
+                }
+            }
+        }
+        log.info("Exiting check-in thread");
+    }
+
     public synchronized SchedulerCallbackListener getCallbackListener() {
         return this.callbackListener;
     }
@@ -97,6 +142,8 @@ public class Scheduler implements InternalTaskEvents {
     public synchronized void setCallbackListener(SchedulerCallbackListener callbackListener) {
         this.callbackListener = callbackListener;
     }
+
+
 
     private void overdueTaskCheck() {
         if (callbackListener == null) return;
@@ -211,32 +258,52 @@ public class Scheduler implements InternalTaskEvents {
             return;
         }
 
-        lock.lock();
+        schedulerLock.lock();
         try {
             waitingForPolling.signal();
         } finally {
-            lock.unlock();
+            schedulerLock.unlock();
+        }
+
+        checkInLock.lock();
+        try {
+            waitingForClusterCheckIn.signal();
+        } finally {
+            checkInLock.unlock();
         }
 
         if (schedulerThread != null) {
             try {
-                schedulerThread.join(500L);
+                schedulerThread.join(500L); // TODO: Add to config, wait for tasks to finish first?
+                schedulerThread.interrupt();
             } catch (InterruptedException e) {
                 schedulerThread.interrupt();
                 schedulerThread = null;
             }
         }
         schedulerThread = null;
+
+        if (checkinThread != null) {
+            try {
+                checkinThread.join(100L);
+                checkinThread.interrupt();
+            } catch (InterruptedException e) {
+                checkinThread.interrupt();
+                checkinThread = null;
+            }
+        }
+        checkinThread = null;
     }
 
     public synchronized void startScheduling() {
-        log.info("Starting scheduling thread");
+
         boolean currentState = isSchedulerThreadRunning.getAndSet(true);
         if (currentState) {
             log.warn("Scheduler already running");
             return;
         }
 
+        log.info("Starting scheduling thread");
         schedulerThread = new Thread(null, this::schedulerThreadMain, CLUSTER_TASKS_SCHEDULER_THREAD);
         schedulerThread.setPriority(Thread.NORM_PRIORITY); // TODO: higher priority? configurable?
         schedulerThread.setUncaughtExceptionHandler((t, e) -> {
@@ -244,20 +311,38 @@ public class Scheduler implements InternalTaskEvents {
             // TODO: restart?
         });
         schedulerThread.start();
+
+        if (taskPersistence.isClustered()) {
+            log.info("Starting scheduling cluster check-in thread");
+            checkinThread = new Thread(null, this::schedulerClusterCheckinThread, CLUSTER_TASKS_CHECKIN_THREAD);
+            checkinThread.setPriority(Thread.MIN_PRIORITY); // TODO: higher priority? configurable?
+            checkinThread.setUncaughtExceptionHandler((t, e) -> {
+                log.error("check-in thread caught uncaught exception", e);
+                // TODO: restart?
+            });
+            checkinThread.start();
+        }
     }
 
 
     private void updatePollingTime() {
         if (!clusterTasksConfig.isSchedulerPollAfterTaskCompletion()) return;
-        lock.lock();
+        schedulerLock.lock();
         try {
             waitingForPolling.signal();
         } finally {
-            lock.unlock();
+            schedulerLock.unlock();
         }
         if (nextPollingTime == null) synchronized (this) {
             nextPollingTime = timeProvider.getCurrent().plusMillis(clusterTasksConfig.getMinimumPollingTimeMilliseconds());
         }
+    }
+
+
+    public List<ClusterInstance> getClusterInstances() {
+        final TaskClusterPersistence clustered = taskPersistence.getClustered();
+        if (clustered == null) return null;
+        return clustered.getClusterInstances();
     }
 
     @Override

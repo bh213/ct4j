@@ -8,12 +8,12 @@ import java.net.UnknownHostException;
 import java.util.UUID;
 
 
-public class NetworkClusterInstance implements ClusterInstance {
+public class NetworkClusterInstanceNaming implements ClusterInstanceNaming {
 
-    private static Logger log = LoggerFactory.getLogger(NetworkClusterInstance.class);
+    private static Logger log = LoggerFactory.getLogger(NetworkClusterInstanceNaming.class);
     private String instanceId;
 
-    public NetworkClusterInstance() {
+    public NetworkClusterInstanceNaming() {
         final String uuid = UUID.randomUUID().toString().replace("-", "");
         try {
 

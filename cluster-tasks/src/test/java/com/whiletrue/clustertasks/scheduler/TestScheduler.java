@@ -2,8 +2,7 @@ package com.whiletrue.clustertasks.scheduler;
 
 
 import com.whiletrue.clustertasks.config.FixedTimeProvider;
-import com.whiletrue.clustertasks.factory.TaskFactory;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.testutils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,21 +28,18 @@ import static org.mockito.Mockito.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TestScheduler {
 
-    protected TaskPersistence taskPersistence;
-    protected ClusterInstance clusterInstance;
-    protected TaskFactory taskFactory;
-    protected FixedTimeProvider fixedTimeProvider = new FixedTimeProvider();
-    protected Scheduler scheduler;
-    protected TaskRunner taskRunner;
+    private TaskPersistence taskPersistence;
+    private ClusterInstanceNaming clusterInstanceNaming;
+    private FixedTimeProvider fixedTimeProvider = new FixedTimeProvider();
+    private Scheduler scheduler;
+    private TaskRunner taskRunner;
 
 
     @BeforeEach
     void init() {
-        clusterInstance = Mockito.mock(ClusterInstance.class);
+        clusterInstanceNaming = Mockito.mock(ClusterInstanceNaming.class);
 
-        when(clusterInstance.getInstanceId()).thenReturn("myclusterinstance");
-
-        taskFactory = Mockito.mock(TaskFactory.class);
+        when(clusterInstanceNaming.getInstanceId()).thenReturn("myclusterinstance");
         fixedTimeProvider.setCurrent(Instant.now());
         taskPersistence = Mockito.mock(TaskPersistence.class);
         taskRunner = Mockito.mock(TaskRunner.class);
@@ -51,7 +47,7 @@ public class TestScheduler {
     }
 
     @Test
-    @DisplayName("test resource estimate")
+    @DisplayName("test scheduler getting resource usage estimates from task runner")
     public void testFreeTasksSlots() {
         ClusterTasksConfig clusterTasksConfig = new ClusterTasksConfigImpl();
         scheduler = new Scheduler(taskPersistence, taskRunner, clusterTasksConfig, fixedTimeProvider);
@@ -64,7 +60,7 @@ public class TestScheduler {
 
 
 
-    @DisplayName("test scheduler schedulerFitAsManyTaskAsPossible")
+    @DisplayName("scheduler schedulerFitAsManyTaskAsPossible enabled")
     @ParameterizedTest
     @ValueSource(strings= {"true","false"})
     public void testSchedulerFitAsManyTaskAsPossible(boolean schedulerFitAsManyTaskAsPossibleEnabled) throws Exception {
@@ -92,7 +88,7 @@ public class TestScheduler {
     }
 
 
-    @DisplayName("test scheduler schedulerPollAfterTaskCompletion")
+    @DisplayName("test scheduler schedulerPollAfterTaskCompletion enabled")
     @ParameterizedTest
     @ValueSource(strings= {"true","false"})
     public void testSchedulerPollAfterTaskCompletion(boolean schedulerPollAfterTaskCompletionEnabled) throws Exception {

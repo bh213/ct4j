@@ -3,13 +3,13 @@ package com.whiletrue.clustertasks.spring;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.DefaultConstructorTaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.spring.JPA.ClusterInstanceRepository;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskEntity;
 import com.whiletrue.clustertasks.spring.JPA.ClusterTaskRepository;
 import com.whiletrue.clustertasks.spring.JPA.JpaClusterTaskPersistence;
 import com.whiletrue.clustertasks.tasks.*;
-import com.whiletrue.clustertasks.instanceid.NetworkClusterInstance;
+import com.whiletrue.clustertasks.instanceid.NetworkClusterInstanceNaming;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
 import com.whiletrue.clustertasks.timeprovider.LocalTimeProvider;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
@@ -79,14 +79,14 @@ public class ClusterTasksSpring implements BeanFactoryAware {
         }
 
         clusterTasksConfig = new ClusterTasksConfigImpl();
-        ClusterInstance clusterInstance = new NetworkClusterInstance();
+        ClusterInstanceNaming clusterInstanceNaming = new NetworkClusterInstanceNaming();
 
         switch(configurationProperties.getPersistence()) {
-            case "memory" : this.clusterTaskPersistence = new InMemoryTaskPersistence(clusterInstance, taskFactory, clusterTasksConfig, timeProvider); break;
+            case "memory" : this.clusterTaskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, clusterTasksConfig, timeProvider); break;
             case "jpa" : {
                 ClusterTaskRepository clusterTaskRepository = this.beanFactory.getBean(ClusterTaskRepository.class);
                 ClusterInstanceRepository clusterInstanceRepository = this.beanFactory.getBean(ClusterInstanceRepository.class);;
-                this.clusterTaskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstance, taskFactory, clusterTasksConfig, timeProvider);
+                this.clusterTaskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstanceNaming, taskFactory, clusterTasksConfig, timeProvider);
                 break;
             }
             default: {

@@ -8,13 +8,15 @@ import java.util.Date;
 
 public class ClusterInstanceEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ct4j_instances_seq")
+    @SequenceGenerator(name = "ct4j_instances_seq", sequenceName = "ct4j_instances_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, length = 64)
     private String instanceId;
 
     @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
     private Date lastCheckIn;
 
     private int checkInIntervalMilliseconds;
@@ -50,5 +52,16 @@ public class ClusterInstanceEntity {
 
     public void setCheckInIntervalMilliseconds(int checkInIntervalMilliseconds) {
         this.checkInIntervalMilliseconds = checkInIntervalMilliseconds;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("ClusterInstanceEntity{");
+        sb.append("id=").append(id);
+        sb.append(", instanceId='").append(instanceId).append('\'');
+        sb.append(", lastCheckIn=").append(lastCheckIn);
+        sb.append(", checkInIntervalMilliseconds=").append(checkInIntervalMilliseconds);
+        sb.append('}');
+        return sb.toString();
     }
 }

@@ -2,7 +2,7 @@ package com.whiletrue.clustertasks.persistence;
 
 
 import com.whiletrue.clustertasks.factory.TaskFactory;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.config.FixedTimeProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 public abstract class TestPersistenceBase {
     protected TaskPersistence taskPersistence;
-    protected ClusterInstance clusterInstance;
+    protected ClusterInstanceNaming clusterInstanceNaming;
     protected TaskFactory taskFactory;
     protected FixedTimeProvider fixedTimeProvider = new FixedTimeProvider();
 
@@ -37,7 +37,7 @@ public abstract class TestPersistenceBase {
     }
 
     @Test
-    @DisplayName("Test task create, get, delete")
+    @DisplayName("task create, get, delete")
     public void createGetDelete() throws Exception {
         final String taskId = taskPersistence.queueTask(new NoOpTestTask(), "very valid string");
         assertThat(taskId).isNotNull();
@@ -77,7 +77,7 @@ public abstract class TestPersistenceBase {
     }
 
     @Test
-    @DisplayName("Test claiming workflow")
+    @DisplayName("claiming workflow")
     public void testClaimingWorkflow() throws Exception {
         final String taskId = taskPersistence.queueTask(new NoOpTestTask(), "very valid string");
         final List<TaskWrapper<?>> tasks = taskPersistence.pollForNextTasks(100);

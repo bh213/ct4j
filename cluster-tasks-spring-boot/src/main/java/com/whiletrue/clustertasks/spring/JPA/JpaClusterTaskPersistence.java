@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.instanceid.ClusterInstance;
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
@@ -21,12 +22,12 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
-public class JpaClusterTaskPersistence implements TaskPersistence {
+public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPersistence {
 
     private static Logger log = LoggerFactory.getLogger(JpaClusterTaskPersistence.class);
     private final ClusterTaskRepository clusterTaskRepository;
     private final ClusterInstanceRepository clusterInstanceRepository;
-    private final ClusterInstance clusterInstance;
+    private final ClusterInstanceNaming clusterInstanceNaming;
     private final TaskFactory taskFactory;
     private final ClusterTasksConfig clusterTasksConfig;
     private final TimeProvider timeProvider;
@@ -34,9 +35,9 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     private ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
-    public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterInstanceRepository clusterInstanceRepository, ClusterInstance clusterInstance, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
+    public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterInstanceRepository clusterInstanceRepository, ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
         this.clusterTaskRepository = clusterTaskRepository;
-        this.clusterInstance = clusterInstance;
+        this.clusterInstanceNaming = clusterInstanceNaming;
         this.taskFactory = taskFactory;
         this.clusterInstanceRepository = clusterInstanceRepository;
         this.clusterTasksConfig = clusterTasksConfig;
@@ -44,13 +45,48 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     }
 
 
+    @Override
     public void instanceCheckIn() {
+        // TODO: detect name collision
+
         final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
-        final ClusterInstanceEntity thisInstance = all.stream().filter(x -> x.getInstanceId().equals(clusterInstance.getInstanceId())).findFirst().orElse(new ClusterInstanceEntity());
-        thisInstance.setInstanceId(clusterInstance.getInstanceId());
-        thisInstance.setLastCheckIn(new Date());
-        thisInstance.setCheckInIntervalMilliseconds(9999); // TODO
-        // TODO: count valid instances
+        final ClusterInstanceEntity thisInstance = all.stream().filter(x -> x.getInstanceId().equals(clusterInstanceNaming.getInstanceId())).findFirst().orElse(new ClusterInstanceEntity());
+        thisInstance.setInstanceId(clusterInstanceNaming.getInstanceId());
+        thisInstance.setLastCheckIn(timeProvider.getCurrentDate());
+        thisInstance.setCheckInIntervalMilliseconds(clusterTasksConfig.getInstanceCheckinTimeInMilliseconds());
+
+        log.info("Instance checkin {}", thisInstance);
+        deleteExpiredInstances(all);
+
+        clusterInstanceRepository.saveAndFlush(thisInstance);
+
+
+    }
+
+    private void deleteExpiredInstances(List<ClusterInstanceEntity> all) {
+        // any node that is more than checkInFailureIntervalMultiplier * checkInIntervalMilliseconds older than last check-in is considered invalid and will be removed
+        final int checkInFailureIntervalMultiplier = clusterTasksConfig.getCheckInFailureIntervalMultiplier();
+        final List<ClusterInstanceEntity> expiredInstances =
+                all.stream().filter(x -> x.getLastCheckIn().toInstant().plusMillis(x.getCheckInIntervalMilliseconds() * checkInFailureIntervalMultiplier).isBefore(timeProvider.getCurrent()))
+                        .collect(Collectors.toList());
+
+
+        expiredInstances.forEach(clusterInstanceEntity -> {
+            log.error("Node {} checkin expired, removing from instance database. Last checkin {}, interval {} ms, factor {}",
+                    clusterInstanceEntity.getInstanceId(),
+                    clusterInstanceEntity.getLastCheckIn(),
+                    clusterInstanceEntity.getCheckInIntervalMilliseconds(),
+                    checkInFailureIntervalMultiplier);
+        });
+        clusterInstanceRepository.deleteAll(expiredInstances);
+        all.removeAll(expiredInstances);
+    }
+
+    @Override
+    public List<ClusterInstance> getClusterInstances() {
+        final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
+        deleteExpiredInstances(all);
+        return all.stream().map(x->new ClusterInstance(x.getInstanceId(),x.getLastCheckIn().toInstant(), x.getCheckInIntervalMilliseconds())).collect(Collectors.toList());
     }
 
 
@@ -63,16 +99,16 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
         return taskKeyToEntityId(task.getTaskExecutionContext().getTaskId());
     }
 
-    <INPUT> String serializeInput(INPUT input) throws JsonProcessingException {
+    private <INPUT> String serializeInput(INPUT input) throws JsonProcessingException {
         return mapper.writeValueAsString(input);
     }
 
-    <INPUT> INPUT deserializeInput(String inputJson, Class<INPUT> inputClass) throws IOException {
+    private <INPUT> INPUT deserializeInput(String inputJson, Class<INPUT> inputClass) throws IOException {
         return mapper.readValue(inputJson, inputClass);
     }
 
 
-    public <INPUT> TaskWrapper<INPUT> entityToTask(ClusterTaskEntity entity) {
+    private <INPUT> TaskWrapper<INPUT> entityToTask(ClusterTaskEntity entity) {
         try {
             Class taskClass = null;
 
@@ -121,10 +157,10 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
                 throw new RuntimeException(e);
             }
 
-            TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstance.getInstanceId(), entity.getId().toString(), entity.getName());
+            TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstanceNaming.getInstanceId(), entity.getId().toString(), entity.getName());
             return new TaskWrapper(taskInstance, input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
         } catch (RuntimeException runtimeException) {
-            clusterTaskRepository.unlockAndChangeTaskStatus(Collections.singletonList(entity.getId()), TaskStatus.Failure, clusterInstance.getInstanceId(), timeProvider.getCurrentDate());
+            clusterTaskRepository.unlockAndChangeTaskStatus(Collections.singletonList(entity.getId()), TaskStatus.Failure, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
             throw runtimeException;
         }
     }
@@ -152,14 +188,18 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     }
 
     @Override
+    public TaskClusterPersistence getClustered() {
+        return this;
+    }
+
+    @Override
     public List<TaskWrapper<?>> findClaimedTasks(List<TaskWrapper<?>> tasks) {
-        return clusterTaskRepository.findActuallyLocked(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), clusterInstance.getInstanceId()).stream().map(entity -> entityToTask(entity)).collect(Collectors.toList());
+        return clusterTaskRepository.findActuallyLocked(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), clusterInstanceNaming.getInstanceId()).stream().map(this::entityToTask).collect(Collectors.toList());
     }
 
     @Override
     public int tryClaimTasks(List<TaskWrapper<?>> tasks) {
-        final int count = clusterTaskRepository.claimTasks(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), clusterInstance.getInstanceId(), timeProvider.getCurrentDate());
-        return count;
+        return clusterTaskRepository.claimTasks(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
     }
 
 
@@ -211,7 +251,6 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
         }
 
 
-
         final ClusterTaskEntity entity = createInitialEntityFromTask(task, serializedInput, taskConfig.getTaskName());
 
         entity.setPriority(priority != null ? priority : taskConfig.getPriority());
@@ -236,13 +275,13 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     @Override
     public void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status) {
-        int count = clusterTaskRepository.unlockAndChangeTaskStatus(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), status, clusterInstance.getInstanceId(), timeProvider.getCurrentDate());
+        int count = clusterTaskRepository.unlockAndChangeTaskStatus(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), status, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
 
     }
 
     @Override
     public void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant newScheduledTime) {
-        int count = clusterTaskRepository.unlockAndSetRetryCount(getTaskPrimaryKey(task), clusterInstance.getInstanceId(), retryCount, Date.from(newScheduledTime), timeProvider.getCurrentDate());
+        int count = clusterTaskRepository.unlockAndSetRetryCount(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(newScheduledTime), timeProvider.getCurrentDate());
 
     }
 
