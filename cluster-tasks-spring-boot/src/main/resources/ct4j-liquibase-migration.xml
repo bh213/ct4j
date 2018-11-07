@@ -88,14 +88,34 @@
             <column name="check_in_interval_milliseconds" type="int">
                 <constraints nullable="false"/>
             </column>
+            <column name="unique_request_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="task_refresh_requested" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="check_status_request" type="timestamp">
+                <constraints nullable="true"/>
+            </column>
+            <column name="available_resources_cpu_core_usage" type="double">
+                <constraints nullable="false"/>
+            </column>
 
+            <column name="available_resources_maximum_memory_usage_in_mb" type="double">
+
+                <constraints nullable="false"/>
+            </column>
+            <column name="available_resources_custom_resource1" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="available_resources_custom_resource2" type="double">
+                <constraints nullable="false"/>
+            </column>
 
         </createTable>
-
-
-
-
     </changeSet>
-
 
 </databaseChangeLog>

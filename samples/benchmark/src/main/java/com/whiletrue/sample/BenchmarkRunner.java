@@ -3,6 +3,7 @@ package com.whiletrue.sample;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.tasks.BasicTaskInfo;
 import com.whiletrue.clustertasks.tasks.StdTaskRunner;
 import com.whiletrue.clustertasks.tasks.TaskCallbacksListener;
@@ -16,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 
@@ -25,14 +25,12 @@ public class BenchmarkRunner implements ApplicationRunner {
 
 
     private static Logger log = LoggerFactory.getLogger(BenchmarkRunner.class);
-    private final JdbcTemplate jdbcTemplate;
     private final TaskManager taskManager;
     private final BenchmarkConfigurationProperties benchmarkConfigurationProperties;
 
 
     @Autowired
-    public BenchmarkRunner(JdbcTemplate jdbcTemplate, TaskManager taskManager, BenchmarkConfigurationProperties benchmarkConfigurationProperties) {
-        this.jdbcTemplate = jdbcTemplate;
+    public BenchmarkRunner(TaskManager taskManager, BenchmarkConfigurationProperties benchmarkConfigurationProperties) {
         this.taskManager = taskManager;
         this.benchmarkConfigurationProperties = benchmarkConfigurationProperties;
 
@@ -58,6 +56,17 @@ public class BenchmarkRunner implements ApplicationRunner {
             public void taskFailed(BasicTaskInfo task) {
                 log.error("Callback: task failed {}", task.getTaskId());
             }
+
+            @Override
+            public void clusterNodeStarted(ClusterInstance clusterInstance) {
+                log.info("Callback: node started {}", clusterInstance);
+            }
+
+            @Override
+            public void clusterNodeStopped(ClusterInstance clusterInstance) {
+                log.info("Callback: node stopped{}", clusterInstance);
+
+            }
         });
 
         if (benchmarkConfigurationProperties.getMode() == BenchmarkConfigurationProperties.BenchmarkMode.NODE) {
@@ -79,8 +88,8 @@ public class BenchmarkRunner implements ApplicationRunner {
 
         if (benchmarkConfigurationProperties.getMode() == BenchmarkConfigurationProperties.BenchmarkMode.GENERATOR) {
 
-            log.info("Running as generator, task scheduling disabled");
-            taskManager.stopScheduling();
+            log.info("Running as generator, task scheduling disabled by default");
+            //taskManager.stopScheduling();
 
         }
 

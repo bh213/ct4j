@@ -1,6 +1,9 @@
 package com.whiletrue.clustertasks.spring.JPA;
 
+import com.whiletrue.clustertasks.instanceid.ClusterInstanceStatus;
+
 import javax.persistence.*;
+import java.time.Instant;
 import java.util.Date;
 
 @Entity()
@@ -14,6 +17,83 @@ public class ClusterInstanceEntity {
 
     @Column(nullable = false, length = 64)
     private String instanceId;
+
+    @Column(nullable = false, length = 64)
+    private String uniqueRequestId;
+
+    @Column(nullable = false)
+    private boolean taskRefreshRequested;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ClusterInstanceStatus status;
+    @Column(nullable = true)
+    private Instant checkStatusRequest;
+
+    @Column(nullable = false)
+    private double availableResourcesCpuCoreUsage;
+    @Column(nullable = false)
+    private double availableResourcesMaximumMemoryUsageInMb;
+    @Column(nullable = false)
+    private double availableResourcesCustomResource1;
+    @Column(nullable = false)
+    private double availableResourcesCustomResource2;
+
+    public ClusterInstanceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ClusterInstanceStatus status) {
+        this.status = status;
+    }
+
+    public Instant getCheckStatusRequest() {
+        return checkStatusRequest;
+    }
+
+    public void setCheckStatusRequest(Instant checkStatusRequest) {
+        this.checkStatusRequest = checkStatusRequest;
+    }
+
+    public double getAvailableResourcesCpuCoreUsage() {
+        return availableResourcesCpuCoreUsage;
+    }
+
+    public void setAvailableResourcesCpuCoreUsage(double availableResourcesCpuCoreUsage) {
+        this.availableResourcesCpuCoreUsage = availableResourcesCpuCoreUsage;
+    }
+
+    public double getAvailableResourcesMaximumMemoryUsageInMb() {
+        return availableResourcesMaximumMemoryUsageInMb;
+    }
+
+    public void setAvailableResourcesMaximumMemoryUsageInMb(double availableResourcesMaximumMemoryUsageInMb) {
+        this.availableResourcesMaximumMemoryUsageInMb = availableResourcesMaximumMemoryUsageInMb;
+    }
+
+    public double getAvailableResourcesCustomResource1() {
+        return availableResourcesCustomResource1;
+    }
+
+    public void setAvailableResourcesCustomResource1(double availableResourcesCustomResource1) {
+        this.availableResourcesCustomResource1 = availableResourcesCustomResource1;
+    }
+
+    public double getAvailableResourcesCustomResource2() {
+        return availableResourcesCustomResource2;
+    }
+
+    public void setAvailableResourcesCustomResource2(double availableResourcesCustomResource2) {
+        this.availableResourcesCustomResource2 = availableResourcesCustomResource2;
+    }
+
+    public String getUniqueRequestId() {
+        return uniqueRequestId;
+    }
+
+    public void setUniqueRequestId(String uniqueRequestId) {
+        this.uniqueRequestId = uniqueRequestId;
+    }
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)
@@ -63,5 +143,13 @@ public class ClusterInstanceEntity {
         sb.append(", checkInIntervalMilliseconds=").append(checkInIntervalMilliseconds);
         sb.append('}');
         return sb.toString();
+    }
+
+    public boolean isTaskRefreshRequested() {
+        return taskRefreshRequested;
+    }
+
+    public void setTaskRefreshRequested(boolean taskRefreshRequested) {
+        this.taskRefreshRequested = taskRefreshRequested;
     }
 }

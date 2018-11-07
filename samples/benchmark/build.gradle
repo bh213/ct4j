@@ -26,27 +26,18 @@ dependencies {
 	implementation "org.springframework.boot:spring-boot-starter-data-jpa"
 	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 
-	//implementation 'com.whiletrue:cluster-tasks:0.7.0-SNAPSHOT'
-	//implementation 'com.whiletrue:cluster-tasks-spring-boot:0.7.0-SNAPSHOT'
-
 	implementation project(":cluster-tasks")
 	implementation project(":cluster-tasks-spring-boot")
-	implementation("org.liquibase:liquibase-core")
+	implementation("org.liquibase:liquibase-core:3.6.2")
 	runtime 'org.postgresql:postgresql:42.2.2'
-
-	//implementation 'com.github.bh213.ct4j:cluster-tasks:0.7.0'
-	//implementation 'com.github.bh213.ct4j:cluster-tasks-spring-boot:0.7.0'
 
 	testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.0.0.RELEASE'
 
 	testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: "5.1.1"
 	testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: "5.1.1"
-
 }
 
-
 compileJava.dependsOn(processResources)
-
 
 test {
 	useJUnitPlatform {

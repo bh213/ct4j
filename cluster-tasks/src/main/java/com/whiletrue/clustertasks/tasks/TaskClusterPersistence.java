@@ -5,6 +5,8 @@ import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import java.util.List;
 
 public interface TaskClusterPersistence {
-    void instanceCheckIn();
+    void instanceInitialCheckIn(String uniqueRequestId);
+    void instanceFinalCheckOut(String uniqueRequestId);
+    List<ClusterInstance> instanceHeartbeat(List<ClusterInstance> previousInstances, String previousUniqueRequestId, String newUniqueRequestId);
     List<ClusterInstance> getClusterInstances();
 }

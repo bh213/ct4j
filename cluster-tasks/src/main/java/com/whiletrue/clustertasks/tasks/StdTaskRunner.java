@@ -100,7 +100,7 @@ public class StdTaskRunner implements TaskRunner {
                     taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
                 }
 
-                future.complete(TaskStatus.Failure); // TODO
+                future.complete(TaskStatus.Failure);
             }
         });
         future.handleAsync((taskStatus, throwable) -> {

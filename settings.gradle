@@ -1,4 +1,4 @@
 enableFeaturePreview('STABLE_PUBLISHING')
-include 'cluster-tasks', 'cluster-tasks-spring-boot', 'samples/benchmark'
+include 'cluster-tasks', 'cluster-tasks-spring-boot', 'samples/benchmark', 'samples/minimal', 'samples/minimal-jpa', 'samples/minimal-jpa-clustered'
 
 

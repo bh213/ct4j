@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,11 +16,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 public class Scheduler implements InternalTaskEvents {
 
     private static final String CLUSTER_TASKS_SCHEDULER_THREAD = "ct4j-scheduler";
-    private static final String CLUSTER_TASKS_CHECKIN_THREAD = "ct4j-checkin";
+    private static final String CLUSTER_TASKS_HEARTBEAT_THREAD = "ct4j-heartbeat";
     private static Logger log = LoggerFactory.getLogger(Scheduler.class);
     private final Lock schedulerLock = new ReentrantLock();
     private final Lock checkInLock = new ReentrantLock();
@@ -77,8 +76,8 @@ public class Scheduler implements InternalTaskEvents {
                 schedulerLock.lock();
                 try {
                     waitingForPolling.await(nextPollingTimeInMilliseconds, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    log.debug("scheduler thread interrupted", e); // TODO: Remove this
+                } catch (InterruptedException ignored) {
+                    // ignore
                 } finally {
                     schedulerLock.unlock();
                 }
@@ -97,7 +96,40 @@ public class Scheduler implements InternalTaskEvents {
 
 
 
-    private void schedulerClusterCheckinThread() {
+    private void checkForNodeChanges(List<ClusterInstance> previousInstances, List<ClusterInstance> currentInstances) {
+
+        if (callbackListener == null) return;
+
+        if (currentInstances == null) currentInstances = Collections.emptyList();
+        if (previousInstances == null) previousInstances = Collections.emptyList();
+
+        Map<String, ClusterInstance> currentInstancesMap = currentInstances.stream().collect(Collectors.toMap(ClusterInstance::getInstanceId, x -> x));
+        Map<String, ClusterInstance> previousInstancesMap = previousInstances.stream().collect(Collectors.toMap(ClusterInstance::getInstanceId, x -> x));
+
+
+        final HashMap<String, ClusterInstance>  nodesAdded  = new HashMap<>(currentInstancesMap);
+        for (ClusterInstance previousInstance : previousInstances) {
+            nodesAdded.remove(previousInstance.getInstanceId());
+        }
+
+        for (ClusterInstance clusterInstance : nodesAdded.values()) {
+            callbackExecutor.execute(() -> callbackListener.clusterNodeStarted(new ClusterInstance(clusterInstance)));
+        }
+
+        final HashMap<String, ClusterInstance>  nodesRemoved = new HashMap<>(previousInstancesMap);
+        for (ClusterInstance currentInstance: currentInstances) {
+            nodesRemoved.remove(currentInstance.getInstanceId());
+        }
+
+        for (ClusterInstance clusterInstance : nodesRemoved.values()) {
+            callbackExecutor.execute(() -> callbackListener.clusterNodeStopped(new ClusterInstance(clusterInstance)));
+        }
+
+    }
+
+
+
+    private void schedulerClusterHeartbeatThread() {
 
         if (!taskPersistence.isClustered()) {
             log.error("cluster checkin should only be enabled when persistence is clustered");
@@ -105,15 +137,33 @@ public class Scheduler implements InternalTaskEvents {
         }
 
         // TODO: specify db connection properties (transactions off and such?)
+
+        String baseUniqueRequestId = UUID.randomUUID().toString() + "-";
+        int uniqueRequestCount = 1;
+
         final TaskClusterPersistence clustered = taskPersistence.getClustered();
+
+        String currentUniqueRequestId = baseUniqueRequestId+uniqueRequestCount;
+        clustered.instanceInitialCheckIn(currentUniqueRequestId); // TODO: repeat on failure?
+        List<ClusterInstance> instances = null;
+
         while (isSchedulerThreadRunning.get()) {
 
             try {
                 try {
-
-                    log.info("Cluster check-in");
                     checkInLock.lock();
-                    clustered.instanceCheckIn();
+
+
+                    String oldUniqueRequestId = currentUniqueRequestId;
+                    uniqueRequestCount++;
+                    currentUniqueRequestId = baseUniqueRequestId+uniqueRequestCount;
+
+                    List<ClusterInstance> previousInstances = instances;
+                    instances = clustered.instanceHeartbeat(previousInstances, oldUniqueRequestId, currentUniqueRequestId);
+
+                    checkForNodeChanges(previousInstances, instances);
+
+                    log.info("Cluster instance heartbeat: {}",  currentUniqueRequestId);
                     try {
                         waitingForClusterCheckIn.await(clusterTasksConfig.getInstanceCheckinTimeInMilliseconds(), TimeUnit.MILLISECONDS);
                     } finally {
@@ -124,7 +174,7 @@ public class Scheduler implements InternalTaskEvents {
                 }
 
             } catch (Exception e) {
-                log.error("Error in schedulerClusterCheckinThread", e);
+                log.error("Error in schedulerClusterHeartbeatThread", e);
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException ignored) {
@@ -132,6 +182,8 @@ public class Scheduler implements InternalTaskEvents {
                 }
             }
         }
+
+        clustered.instanceFinalCheckOut(currentUniqueRequestId);
         log.info("Exiting check-in thread");
     }
 
@@ -212,7 +264,6 @@ public class Scheduler implements InternalTaskEvents {
                             }
                         }
                         break;
-
                     }
                 }
             }
@@ -234,7 +285,7 @@ public class Scheduler implements InternalTaskEvents {
                 TaskWrapper<?> finalClaimedTask = claimedTask;
                 final Optional<TaskWrapper<?>> candidateTask = candidatesAfterResources.stream().filter(x -> x.getTaskExecutionContext().getTaskId().equals(finalClaimedTask.getTaskExecutionContext().getTaskId())).findFirst();
 
-                if (!claimedTask.getLastUpdated().equals(candidateTask.get())) {
+                if (!claimedTask.getLastUpdated().equals(candidateTask.get().getLastUpdated())) { // TODO: check this
                     claimedTask = taskPersistence.getTask(claimedTask.getTaskExecutionContext().getTaskId());
                 }
                 taskRunner.executeTask(claimedTask, this);
@@ -249,8 +300,11 @@ public class Scheduler implements InternalTaskEvents {
         return isSchedulerThreadRunning.get();
     }
 
+
     public synchronized void stopScheduling() {
         log.info("stopping scheduling thread");
+
+        // TODO: calculate max wait time
 
         boolean currentState = isSchedulerThreadRunning.getAndSet(false);
         if (!currentState) {
@@ -314,7 +368,7 @@ public class Scheduler implements InternalTaskEvents {
 
         if (taskPersistence.isClustered()) {
             log.info("Starting scheduling cluster check-in thread");
-            checkinThread = new Thread(null, this::schedulerClusterCheckinThread, CLUSTER_TASKS_CHECKIN_THREAD);
+            checkinThread = new Thread(null, this::schedulerClusterHeartbeatThread, CLUSTER_TASKS_HEARTBEAT_THREAD);
             checkinThread.setPriority(Thread.MIN_PRIORITY); // TODO: higher priority? configurable?
             checkinThread.setUncaughtExceptionHandler((t, e) -> {
                 log.error("check-in thread caught uncaught exception", e);

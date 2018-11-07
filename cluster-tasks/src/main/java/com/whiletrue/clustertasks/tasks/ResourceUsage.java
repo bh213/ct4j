@@ -12,6 +12,14 @@ public class ResourceUsage {
     ;
 
 
+    public String getCustomResource1Name() {
+        return customResource1Name;
+    }
+
+    public String getCustomResource2Name() {
+        return customResource2Name;
+    }
+
     public ResourceUsage(float cpuCoreUsage, float maximumMemoryUsageInMb) {
         this.cpuCoreUsage = cpuCoreUsage;
         this.maximumMemoryUsageInMb = maximumMemoryUsageInMb;

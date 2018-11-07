@@ -5,4 +5,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ClusterInstanceRepository extends JpaRepository<ClusterInstanceEntity, Long> {
+
+    long deleteByUniqueRequestId(String uniqueRequestId);
 }
