@@ -30,9 +30,9 @@ public interface TaskPersistence {
 
     /**
      *
-     * @return TaskClusterPersistence instance if task is clustered (@see isClustered() returns true)
+     * @return ClusterNodePersistence instance if task is clustered (@see isClustered() returns true)
      */
-    TaskClusterPersistence getClustered();
+    ClusterNodePersistence getClusterNodePersistence();
 
     /**
      *

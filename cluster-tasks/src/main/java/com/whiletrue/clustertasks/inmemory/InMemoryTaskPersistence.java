@@ -193,7 +193,7 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     }
 
     @Override
-    public TaskClusterPersistence getClustered() {
+    public ClusterNodePersistence getClusterNodePersistence() {
         return null;
     }
 

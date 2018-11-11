@@ -3,10 +3,10 @@ package com.whiletrue.clustertasks.tasks;
 import com.whiletrue.clustertasks.scheduler.InternalTaskEvents;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 public interface TaskRunner {
-    <INPUT> CompletableFuture<TaskStatus> executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents);
+    <INPUT> Future<TaskStatus> executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents);
 
     /**
      * @return Returns how many free slots for tasks this runner still has. This is the maximum number of tasks that

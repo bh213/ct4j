@@ -48,4 +48,8 @@ public interface ClusterTaskRepository extends JpaRepository<ClusterTaskEntity, 
     @Modifying
     @Query("UPDATE ClusterTaskEntity ct SET ct.lockedByInstanceId = NULL, ct.lastUpdate = ?5, ct.lockTime = NULL, ct.status='Pending', ct.retryCount=?3, ct.nextRun=?4 WHERE ct.id =?1 AND ct.lockedByInstanceId = ?2")
     int unlockAndSetRetryCount(long id, String instanceId, int retryCount, Date newScheduledTime, Date current);
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.lockedByInstanceId = ?1 AND ct.lockTime IS NOT NULL")
+    List<ClusterTaskEntity> findLockedByInstance(String instanceId);
 }

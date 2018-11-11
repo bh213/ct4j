@@ -10,9 +10,9 @@ public abstract class TaskFactoryBase implements TaskFactory {
     private final List<ClusterTasksCustomFactory> customTaskFactories = new ArrayList<>();
 
     @Override
-    public synchronized <TASK extends Task> Task createInstance(Class<TASK> taskClass) throws Exception {
+    public synchronized <TASK extends Task, INPUT> Task<INPUT> createInstance(Class<TASK> taskClass) throws Exception {
         for (ClusterTasksCustomFactory customTaskFactory: customTaskFactories) {
-            final Task task = customTaskFactory.createInstance(taskClass);
+            final Task<INPUT> task = customTaskFactory.createInstance(taskClass);
             if (task != null) return task;
         }
         return null;

@@ -28,7 +28,7 @@ public class TestBasicFactory {
     @DisplayName("task creation failure (task with no default constructor)")
     public void createFailsOnTaskWithNoDefaultConstructor() throws Exception {
         DefaultConstructorTaskFactory factory = new DefaultConstructorTaskFactory();
-        assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).hasCauseInstanceOf(NoSuchMethodException.class);
+        assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).isInstanceOf(NoSuchMethodException.class);
     }
 
     @Test
@@ -49,7 +49,7 @@ public class TestBasicFactory {
     public void testListenerNotProvidingInstance() throws Exception {
         DefaultConstructorTaskFactory factory = new DefaultConstructorTaskFactory();
         factory.addCustomTaskFactory(taskClass -> null);
-        assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).hasCauseInstanceOf(NoSuchMethodException.class);
+        assertThatThrownBy( ()-> factory.createInstance(NoDefaultConstructorTestTask.class)).isInstanceOf(NoSuchMethodException.class);
     }
 }
 

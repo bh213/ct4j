@@ -38,8 +38,6 @@ import static org.mockito.Mockito.when;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class TestInJpaTaskPersistence extends TestPersistenceBase {
     @Autowired
-    private ClusterInstanceRepository clusterInstanceRepository;
-    @Autowired
     private ClusterTaskRepository clusterTaskRepository;
     @Autowired
     private AutowireCapableBeanFactory applicationContext;
@@ -52,7 +50,7 @@ public class TestInJpaTaskPersistence extends TestPersistenceBase {
         when(clusterInstanceNaming.getInstanceId()).thenReturn("myclusterinstance");
         taskFactory = new SpringTaskFactory(applicationContext);
         fixedTimeProvider.setCurrent(Instant.now());
-        taskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstanceNaming, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
+        taskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, null, clusterInstanceNaming, taskFactory, new ClusterTasksConfigImpl(), fixedTimeProvider);
     }
 
     @SpringBootApplication

@@ -3,9 +3,7 @@ package com.whiletrue.clustertasks.spring.JPA;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whiletrue.clustertasks.factory.TaskFactory;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
 import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
-import com.whiletrue.clustertasks.instanceid.ClusterInstanceStatus;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
@@ -20,11 +18,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPersistence {
+public class JpaClusterTaskPersistence implements TaskPersistence {
 
     private static Logger log = LoggerFactory.getLogger(JpaClusterTaskPersistence.class);
     private final ClusterTaskRepository clusterTaskRepository;
-    private final ClusterInstanceRepository clusterInstanceRepository;
+    private final ClusterNodePersistence clusterNodePersistence;
     private final ClusterInstanceNaming clusterInstanceNaming;
     private final TaskFactory taskFactory;
     private final ClusterTasksConfig clusterTasksConfig;
@@ -33,114 +31,15 @@ public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPe
     private ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
-    public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterInstanceRepository clusterInstanceRepository, ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
+    public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterNodePersistence clusterNodePersistence, ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
         this.clusterTaskRepository = clusterTaskRepository;
+        this.clusterNodePersistence = clusterNodePersistence;
         this.clusterInstanceNaming = clusterInstanceNaming;
         this.taskFactory = taskFactory;
-        this.clusterInstanceRepository = clusterInstanceRepository;
         this.clusterTasksConfig = clusterTasksConfig;
         this.timeProvider = timeProvider;
     }
 
-
-    @Override
-    public void instanceInitialCheckIn(String uniqueRequestId) {
-        final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
-        ClusterInstanceEntity clusterInstanceEntity = all.stream().filter(x -> x.getInstanceId().equals(clusterInstanceNaming.getInstanceId())).findFirst().orElse(null);
-        if (clusterInstanceEntity != null) {
-            log.warn("Existing cluster instance detected: {}", clusterInstanceEntity.getInstanceId());
-            // TODO: restart/resume tasks?
-        }
-        else {
-            log.info("Registering new cluster instance");
-            clusterInstanceEntity = new ClusterInstanceEntity();
-        }
-
-        clusterInstanceEntity.setInstanceId(clusterInstanceNaming.getInstanceId());
-        clusterInstanceEntity.setLastCheckIn(timeProvider.getCurrentDate());
-        clusterInstanceEntity.setCheckInIntervalMilliseconds(clusterTasksConfig.getInstanceCheckinTimeInMilliseconds());
-        clusterInstanceEntity.setUniqueRequestId(uniqueRequestId);
-        clusterInstanceEntity.setStatus(ClusterInstanceStatus.RUNNING);
-        clusterInstanceEntity.setAvailableResourcesCpuCoreUsage(0);// TODO: fix me, get data from config and/or runner
-        clusterInstanceEntity.setAvailableResourcesMaximumMemoryUsageInMb(0);
-        clusterInstanceEntity.setAvailableResourcesCustomResource1(0);
-        clusterInstanceEntity.setAvailableResourcesCustomResource2(0);
-        clusterInstanceRepository.saveAndFlush(clusterInstanceEntity);
-    }
-
-    @Override
-    public void instanceFinalCheckOut(String uniqueRequestId) {
-
-        long deleted = clusterInstanceRepository.deleteByUniqueRequestId(uniqueRequestId);
-        if (deleted == 1) log.info("Instance {} checkout successful", clusterInstanceNaming.getInstanceId());
-        else log.warn("Instance {} checkout failure. Deleted: {}", clusterInstanceNaming.getInstanceId(), deleted);
-    }
-
-    @Override
-    public List<ClusterInstance> instanceHeartbeat(List<ClusterInstance> previousInstances, String previousUniqueRequestId, String newUniqueRequestId) {
-
-
-
-        final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
-        final ClusterInstanceEntity thisInstance = all.stream().filter(x -> x.getInstanceId().equals(clusterInstanceNaming.getInstanceId())).findFirst().orElse(new ClusterInstanceEntity());
-
-        if (!thisInstance.getUniqueRequestId().equals(previousUniqueRequestId)) {
-            log.error("Name collision detected, expected unique request id {} got {}", previousUniqueRequestId, thisInstance.getUniqueRequestId());
-            // TODO:
-        }
-
-        thisInstance.setLastCheckIn(timeProvider.getCurrentDate());
-        thisInstance.setUniqueRequestId(newUniqueRequestId);
-        log.trace("JPAClusterTaskPersistence: Instance {} heartbeat {}", thisInstance.getInstanceId(), thisInstance.getUniqueRequestId());
-
-        final List<ClusterInstanceEntity> returnEntries = deleteExpiredInstances(all);
-        clusterInstanceRepository.saveAndFlush(thisInstance); // TODO: replace with JPA method
-        return getClusterInstances(returnEntries);
-  }
-
-
-
-    private List<ClusterInstanceEntity> deleteExpiredInstances(List<ClusterInstanceEntity> all) {
-        // any node that is more than checkInFailureIntervalMultiplier * checkInIntervalMilliseconds older than last check-in is considered invalid and will be removed
-        final int checkInFailureIntervalMultiplier = clusterTasksConfig.getCheckInFailureIntervalMultiplier();
-        final List<ClusterInstanceEntity> expiredInstances =
-                all.stream().filter(x -> x.getLastCheckIn().toInstant().plusMillis(x.getCheckInIntervalMilliseconds() * checkInFailureIntervalMultiplier).isBefore(timeProvider.getCurrent()))
-                        .collect(Collectors.toList());
-
-
-        expiredInstances.forEach(clusterInstanceEntity -> {
-            log.error("Node {} checkin expired, removing from instance database. Last checkin {}, interval {} ms, factor {}",
-                    clusterInstanceEntity.getInstanceId(),
-                    clusterInstanceEntity.getLastCheckIn(),
-                    clusterInstanceEntity.getCheckInIntervalMilliseconds(),
-                    checkInFailureIntervalMultiplier);
-        });
-        clusterInstanceRepository.deleteAll(expiredInstances);
-        all.removeAll(expiredInstances);
-        return all;
-    }
-
-    @Override
-    public List<ClusterInstance> getClusterInstances() {
-        final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
-        deleteExpiredInstances(all);
-        return getClusterInstances(all);
-    }
-
-    private List<ClusterInstance> getClusterInstances(List<ClusterInstanceEntity> entities) {
-        if (entities == null) return null;
-        return entities.stream().map(x->{
-            final ResourceUsage resourceUsage = new ResourceUsage(
-                    (float)x.getAvailableResourcesCpuCoreUsage(),
-                    (float)x.getAvailableResourcesMaximumMemoryUsageInMb(),
-                    clusterTasksConfig.getConfiguredResources().getCustomResource1Name(),
-                    (float)x.getAvailableResourcesCustomResource1(),
-                    clusterTasksConfig.getConfiguredResources().getCustomResource2Name(),
-                    (float)x.getAvailableResourcesCustomResource2());
-
-            return new ClusterInstance(x.getInstanceId(),x.getLastCheckIn().toInstant(), x.getCheckInIntervalMilliseconds(), x.getStatus(), x.getCheckStatusRequest(), resourceUsage);
-        }).collect(Collectors.toList());
-    }
 
 
     private Long taskKeyToEntityId(String taskId) {
@@ -172,7 +71,7 @@ public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPe
                 throw new RuntimeException(e);
             }
 
-            Task taskInstance = null;
+            Task<INPUT> taskInstance;
             try {
                 taskInstance = taskFactory.createInstance(taskClass);
             } catch (Exception createInstanceException) {
@@ -211,7 +110,7 @@ public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPe
             }
 
             TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstanceNaming.getInstanceId(), entity.getId().toString(), entity.getName());
-            return new TaskWrapper(taskInstance, input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
+            return new TaskWrapper<INPUT>(taskInstance, (INPUT)input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
         } catch (RuntimeException runtimeException) {
             clusterTaskRepository.unlockAndChangeTaskStatus(Collections.singletonList(entity.getId()), TaskStatus.Failure, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
             throw runtimeException;
@@ -240,10 +139,6 @@ public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPe
         return clusterTaskRepository.countPendingTasks(timeProvider.getCurrentDate());
     }
 
-    @Override
-    public TaskClusterPersistence getClustered() {
-        return this;
-    }
 
     @Override
     public List<TaskWrapper<?>> findClaimedTasks(List<TaskWrapper<?>> tasks) {
@@ -353,9 +248,20 @@ public class JpaClusterTaskPersistence implements TaskPersistence, TaskClusterPe
 
     }
 
+
+    public void recoverTasks(String instanceId) {
+        final List<ClusterTaskEntity> lockedByInstance = clusterTaskRepository.findLockedByInstance(instanceId);
+    }
+
     @Override
     public boolean isClustered() {
-        return true;
+        return clusterNodePersistence != null;
+    }
+
+
+    @Override
+    public ClusterNodePersistence getClusterNodePersistence() {
+        return clusterNodePersistence;
     }
 
 

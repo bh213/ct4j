@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -19,6 +18,8 @@ import java.util.stream.Collectors;
  */
 public class StdTaskRunner implements TaskRunner {
 
+
+    // TODO: add shutdown
     private static Logger log = LoggerFactory.getLogger(StdTaskRunner.class);
     private final LinkedList<TaskWrapper<?>> currentlyExecutingTasksList;
     private final ExecutorService executorService;
@@ -35,13 +36,11 @@ public class StdTaskRunner implements TaskRunner {
         this.currentlyExecutingTasksList = new LinkedList<>();
 
         this.currentResourceUsage = new ResourceUsage(clusterTasksConfig.getConfiguredResources());
-
-        log.info("Estimated configured resources: {}", this.currentResourceUsage); // TODO: move to initial banner?
     }
 
 
     @Override
-    public <INPUT> CompletableFuture<TaskStatus> executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents) {
+    public <INPUT> Future<TaskStatus> executeTask(TaskWrapper<INPUT> taskWrapper, InternalTaskEvents internalTaskEvents) {
 
         final Task<INPUT> task = taskWrapper.getTask();
         final INPUT input = taskWrapper.getInput();
@@ -55,9 +54,7 @@ public class StdTaskRunner implements TaskRunner {
             currentResourceUsage.subtract(taskWrapper.getTaskConfig().getResourceUsage()); // task will now run so we decrease available resources
         }
 
-        CompletableFuture<TaskStatus> future = new CompletableFuture<>();
-
-        Future<?> taskExecution = executorService.submit(() -> {
+        Future<TaskStatus> taskExecution = executorService.submit(() -> {
 
             TaskConfig taskConfig = taskWrapper.getTaskConfig();
 
@@ -79,7 +76,14 @@ public class StdTaskRunner implements TaskRunner {
                 // TODO: use db aggregator for unlock and change status so we can do batch update?
                 taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
                 log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
-                future.complete(TaskStatus.Success);
+
+
+                synchronized (this) {
+                    currentlyExecutingTasksList.remove(taskWrapper);
+                    currentResourceUsage.add(taskWrapper.getTaskConfig().getResourceUsage()); // task has completed, return resources to task runner
+
+                }
+                return TaskStatus.Success;
             } catch (Exception taskException) {
                 log.error("Task with id {} has thrown exception: {}", taskExecutionContext.getTaskId(), taskException);
 
@@ -99,18 +103,16 @@ public class StdTaskRunner implements TaskRunner {
                     log.error("Error handling retry for task {}:{}", taskExecutionContext.getTaskId(), e);
                     taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
                 }
+                synchronized (this) {
+                    currentlyExecutingTasksList.remove(taskWrapper);
+                    currentResourceUsage.add(taskWrapper.getTaskConfig().getResourceUsage()); // task has completed, return resources to task runner
+                }
 
-                future.complete(TaskStatus.Failure);
+                return TaskStatus.Failure;
             }
         });
-        future.handleAsync((taskStatus, throwable) -> {
-            synchronized (this) {
-                currentlyExecutingTasksList.remove(taskWrapper);
-                currentResourceUsage.add(taskWrapper.getTaskConfig().getResourceUsage()); // task has completed, return resources to task runner
-                return true;
-            }
-        });
-        return future;
+
+       return taskExecution;
     }
 
 

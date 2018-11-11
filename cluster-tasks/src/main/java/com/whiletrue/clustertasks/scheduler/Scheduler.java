@@ -141,7 +141,7 @@ public class Scheduler implements InternalTaskEvents {
         String baseUniqueRequestId = UUID.randomUUID().toString() + "-";
         int uniqueRequestCount = 1;
 
-        final TaskClusterPersistence clustered = taskPersistence.getClustered();
+        final ClusterNodePersistence clustered = taskPersistence.getClusterNodePersistence();
 
         String currentUniqueRequestId = baseUniqueRequestId+uniqueRequestCount;
         clustered.instanceInitialCheckIn(currentUniqueRequestId); // TODO: repeat on failure?
@@ -394,7 +394,7 @@ public class Scheduler implements InternalTaskEvents {
 
 
     public List<ClusterInstance> getClusterInstances() {
-        final TaskClusterPersistence clustered = taskPersistence.getClustered();
+        final ClusterNodePersistence clustered = taskPersistence.getClusterNodePersistence();
         if (clustered == null) return null;
         return clustered.getClusterInstances();
     }

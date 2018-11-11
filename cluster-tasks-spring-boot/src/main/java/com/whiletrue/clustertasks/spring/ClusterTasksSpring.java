@@ -4,10 +4,7 @@ import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.DefaultConstructorTaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
 import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
-import com.whiletrue.clustertasks.spring.JPA.ClusterInstanceRepository;
-import com.whiletrue.clustertasks.spring.JPA.ClusterTaskEntity;
-import com.whiletrue.clustertasks.spring.JPA.ClusterTaskRepository;
-import com.whiletrue.clustertasks.spring.JPA.JpaClusterTaskPersistence;
+import com.whiletrue.clustertasks.spring.JPA.*;
 import com.whiletrue.clustertasks.tasks.*;
 import com.whiletrue.clustertasks.instanceid.NetworkClusterInstanceNaming;
 import com.whiletrue.clustertasks.scheduler.Scheduler;
@@ -85,8 +82,10 @@ public class ClusterTasksSpring implements BeanFactoryAware {
             case "memory" : this.clusterTaskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, clusterTasksConfig, timeProvider); break;
             case "jpa" : {
                 ClusterTaskRepository clusterTaskRepository = this.beanFactory.getBean(ClusterTaskRepository.class);
-                ClusterInstanceRepository clusterInstanceRepository = this.beanFactory.getBean(ClusterInstanceRepository.class);;
-                this.clusterTaskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, clusterInstanceRepository, clusterInstanceNaming, taskFactory, clusterTasksConfig, timeProvider);
+                ClusterInstanceRepository clusterInstanceRepository = this.beanFactory.getBean(ClusterInstanceRepository.class);
+                final JpaClusterNodePersistence jpaClusterNodePersistence = new JpaClusterNodePersistence(clusterInstanceRepository, clusterInstanceNaming, clusterTasksConfig, timeProvider);
+                this.clusterTaskPersistence = new JpaClusterTaskPersistence(clusterTaskRepository, jpaClusterNodePersistence, clusterInstanceNaming, taskFactory, clusterTasksConfig, timeProvider);
+
                 break;
             }
             default: {
@@ -120,6 +119,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
                 "  Persistence:        " + clusterTaskPersistence.getClass().getSimpleName()+"\n" +
                 "  Task runner:        " + taskRunner.getClass().getSimpleName()+"\n" +
                 "  Scheduler:          " + scheduler.getClass().getSimpleName()+"\n" +
+                "  Avail. resources:   " + taskRunner.getCurrentResourcesAvailable().toString()+"\n" +
                 "================================================================================\n");
         return taskManager;
     }

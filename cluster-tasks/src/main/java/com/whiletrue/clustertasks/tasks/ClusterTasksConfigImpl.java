@@ -35,7 +35,7 @@ public class ClusterTasksConfigImpl implements ClusterTasksConfig {
         long allocatedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
         long presumableFreeMemory = Runtime.getRuntime().maxMemory() - allocatedMemory;
 
-        this.availableResources = new ResourceUsage(Runtime.getRuntime().availableProcessors(), presumableFreeMemory / 1000000.0f, "custom resource 1", 100, "custom resource 2", 100);
+        this.availableResources = new ResourceUsage(Runtime.getRuntime().availableProcessors(), presumableFreeMemory / 1000000.0f, "resource 1", 100, "resource 2", 100);
 
     }
 

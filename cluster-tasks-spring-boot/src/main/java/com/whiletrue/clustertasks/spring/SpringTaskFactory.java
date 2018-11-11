@@ -21,9 +21,9 @@ public class SpringTaskFactory extends TaskFactoryBase {
     }
 
     @Override
-    public synchronized <TASK extends Task> Task createInstance(Class<TASK> taskClass) throws Exception{
+    public synchronized <TASK extends Task, INPUT> Task<INPUT> createInstance(Class<TASK> taskClass) throws Exception{
 
-        final Task instance = super.createInstance(taskClass);
+        final Task<INPUT> instance = super.createInstance(taskClass);
         if (instance == null) return autowireCapableBeanFactory.createBean(taskClass);
         else return instance;
     }

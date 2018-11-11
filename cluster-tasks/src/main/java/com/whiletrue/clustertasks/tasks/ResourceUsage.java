@@ -107,8 +107,8 @@ public class ResourceUsage {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("ResourceUsage{");
-        sb.append("[cpu:").append(cpuCoreUsage);
+        final StringBuilder sb = new StringBuilder("[cpu:")
+        .append(cpuCoreUsage);
         sb.append("  mem:").append(maximumMemoryUsageInMb);
         sb.append("MB, ")
                 .append(customResource1Name)

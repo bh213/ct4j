@@ -12,7 +12,7 @@ import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +45,7 @@ public class TestTaskRunner {
 
         TaskWrapper<?> wrapper = new TaskWrapper<String>(task, "test", new TaskExecutionContext(0, "node1", "id-1","taskclass1" ), Instant.now(), builder.build());
 
-        final CompletableFuture<TaskStatus> future = taskRunner.executeTask(wrapper, internalEvents);
+        final Future<TaskStatus> future = taskRunner.executeTask(wrapper, internalEvents);
         final TaskStatus taskStatus = future.get(1, TimeUnit.SECONDS);
         assertThat(taskStatus).isEqualTo(TaskStatus.Success);
 
@@ -68,7 +68,7 @@ public class TestTaskRunner {
 
         TaskWrapper<?> wrapper = new TaskWrapper<String>(task, "test", new TaskExecutionContext(0, "node1", "id-1","taskclass1" ), Instant.now(), builder.build());
 
-        final CompletableFuture<TaskStatus> future = taskRunner.executeTask(wrapper, internalEvents);
+        final Future<TaskStatus> future = taskRunner.executeTask(wrapper, internalEvents);
         final TaskStatus taskStatus = future.get(1, TimeUnit.SECONDS);
         assertThat(taskStatus).isEqualTo(TaskStatus.Failure);
 

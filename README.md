@@ -1,6 +1,6 @@
 
 
- [![](https://jitpack.io/v/bh213/ct4j.svg)](https://jitpack.io/#bh213/ct4j)  &nbsp; 
+ [![](https://jitpack.io/v/bh213/ct4j.svg)](https://jitpack.io/#bh213/ct4j) 
  [![](https://img.shields.io/travis/bh213/ct4j.svg)](https://travis-ci.org/bh213/ct4j) 
  ![https://github.com/bh213/ct4j/blob/master/LICENSE](https://img.shields.io/github/license/mashape/apistatus.svg)
 
