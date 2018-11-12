@@ -33,11 +33,10 @@ public class JpaClusterNodePersistence implements ClusterNodePersistence {
         this.timeProvider = timeProvider;
     }
 
-
     @Override
     public void instanceInitialCheckIn(String uniqueRequestId) {
         final List<ClusterInstanceEntity> all = clusterInstanceRepository.findAll();
-        ClusterInstanceEntity clusterInstanceEntity = all.stream().filter(x -> x.getInstanceId().equals(clusterInstanceNaming.getInstanceId())).findFirst().orElse(null);
+        var clusterInstanceEntity = all.stream().filter(x -> x.getInstanceId().equals(clusterInstanceNaming.getInstanceId())).findFirst().orElse(null);
         if (clusterInstanceEntity != null) {
             log.warn("cluster instance restart detected: {}", clusterInstanceEntity.getInstanceId());
             // TODO: restart/resume tasks?

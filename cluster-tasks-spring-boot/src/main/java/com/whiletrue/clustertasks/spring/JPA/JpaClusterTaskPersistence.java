@@ -62,11 +62,11 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     private <INPUT> TaskWrapper<INPUT> entityToTask(ClusterTaskEntity entity) {
         try {
-            Class taskClass = null;
+            Class<? extends Task> taskClass;
 
             try {
-                taskClass = Class.forName(entity.getTaskClass());
-            } catch (ClassNotFoundException e) {
+                taskClass = Class.forName(entity.getTaskClass()).asSubclass(Task.class);
+            } catch (Exception e) {
                 log.error("Could not find Class for {} for task id {}:{}", entity.getTaskClass(), entity.getId(), e);
                 throw new RuntimeException(e);
             }
@@ -79,11 +79,11 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
                 throw new RuntimeException(createInstanceException);
             }
 
-            Object input = null;
+            INPUT input = null;
             if (entity.getInputClass() != null) {
-                final Class inputClass;
+                final Class<INPUT> inputClass;
                 try {
-                    inputClass = Class.forName(entity.getInputClass());
+                    inputClass = (Class<INPUT>) Class.forName(entity.getInputClass());
                 } catch (ClassNotFoundException findInputClassException) {
                     log.error("Could not find input class for {} for task id {}:{}", entity.getTaskClass(), entity.getId(), findInputClassException);
                     throw new RuntimeException(findInputClassException);
@@ -110,7 +110,7 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
             }
 
             TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstanceNaming.getInstanceId(), entity.getId().toString(), entity.getName());
-            return new TaskWrapper<INPUT>(taskInstance, (INPUT)input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
+            return new TaskWrapper<>(taskInstance, input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
         } catch (RuntimeException runtimeException) {
             clusterTaskRepository.unlockAndChangeTaskStatus(Collections.singletonList(entity.getId()), TaskStatus.Failure, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
             throw runtimeException;
@@ -118,14 +118,12 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     }
 
     public ClusterTaskEntity createInitialEntityFromTask(Task<?> task, String serializedInput, String taskName) {
-        final ClusterTaskEntity entity = new ClusterTaskEntity();
+        final var entity = new ClusterTaskEntity();
         entity.setName(taskName);
         entity.setInput(serializedInput);
         entity.setTaskClass(task.getClass().getName());
         entity.setLastUpdate(new Date());
-
         return entity;
-
     }
 
     @Override
@@ -245,7 +243,6 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
         final ClusterTaskEntity entity = clusterTaskRepository.findById(taskKeyToEntityId(taskId)).orElse(null);
         if (entity == null) return null;
         return entity.getStatus();
-
     }
 
 
