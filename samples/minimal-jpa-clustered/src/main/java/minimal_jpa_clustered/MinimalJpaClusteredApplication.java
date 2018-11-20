@@ -1,6 +1,6 @@
 package minimal_jpa_clustered;
 
-import com.whiletrue.clustertasks.spring.EnableClusterTasks;
+import com.whiletrue.clustertasks.spring.EnableCt4j;
 import com.whiletrue.clustertasks.tasks.TaskManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
-@EnableClusterTasks
+@EnableCt4j
 @SpringBootApplication
 public class MinimalJpaClusteredApplication {
 

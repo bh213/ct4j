@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
  */
 public class StdTaskRunner implements TaskRunner {
 
-
     // TODO: add shutdown
     private static Logger log = LoggerFactory.getLogger(StdTaskRunner.class);
     private final LinkedList<TaskWrapper<?>> currentlyExecutingTasksList;

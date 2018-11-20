@@ -1,2 +1,8 @@
 language: java
-jdk: oraclejdk11
+jdk:
+  - oraclejdk11
+  - openjdk11
+
+script:
+  - ./gradlew build --scan
+  - ./gradlew samples/minimal:bootRun

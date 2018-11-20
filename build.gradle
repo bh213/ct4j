@@ -2,6 +2,9 @@ allprojects {
     version = VERSION_NAME
     group = GROUP
     buildDir = "${project.rootDir}/build/${rootProject.name}/${project.name}"
+    apply plugin: 'java'
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 wrapper {

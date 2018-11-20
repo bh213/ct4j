@@ -75,6 +75,13 @@ public interface TaskManager {
     long countPendingTasks();
 
     /**
+     *
+     * @param taskId
+     * @return Task status or null if not found or available
+     */
+    TaskStatus getTaskStatus(String taskId);
+
+    /**
      * Estimates unused compute resources for this node. @see {@link ResourceUsage}
      * @return estimate of resources available to this node
      */

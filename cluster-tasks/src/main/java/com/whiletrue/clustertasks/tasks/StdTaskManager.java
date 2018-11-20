@@ -69,6 +69,11 @@ public class StdTaskManager implements TaskManager {
     }
 
     @Override
+    public TaskStatus getTaskStatus(String taskId) {
+        return taskPersistence.getTaskStatus(taskId);
+    }
+
+    @Override
     public ResourceUsage getFreeResourcesEstimate(){
         return scheduler.getFreeResourcesEstimate();
     }

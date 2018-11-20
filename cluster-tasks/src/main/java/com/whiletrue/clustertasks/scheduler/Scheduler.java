@@ -46,7 +46,7 @@ public class Scheduler implements InternalTaskEvents {
         this.clusterTasksConfig = clusterTasksConfig;
         this.timeProvider = timeProvider;
         this.taskPerformanceEventsCollector = new TaskPerformanceEventsCollector();
-        this.callbackExecutor = Executors.newSingleThreadExecutor();
+        this.callbackExecutor = Executors.newCachedThreadPool();
     }
 
     public Instant getNextPollingTime() {
@@ -91,7 +91,7 @@ public class Scheduler implements InternalTaskEvents {
                 }
             }
         }
-        log.info("Exiting scheduler thread");
+        log.info("Exiting ct4j scheduler thread");
     }
 
 
@@ -302,13 +302,13 @@ public class Scheduler implements InternalTaskEvents {
 
 
     public synchronized void stopScheduling() {
-        log.info("stopping scheduling thread");
+        log.info("Stopping ct4j scheduling thread");
 
         // TODO: calculate max wait time
 
         boolean currentState = isSchedulerThreadRunning.getAndSet(false);
         if (!currentState) {
-            log.warn("Scheduler already stopped");
+            log.error("ct4j scheduler already stopped");
             return;
         }
 
@@ -353,25 +353,25 @@ public class Scheduler implements InternalTaskEvents {
 
         boolean currentState = isSchedulerThreadRunning.getAndSet(true);
         if (currentState) {
-            log.warn("Scheduler already running");
+            log.warn("ct4j scheduler already running");
             return;
         }
 
-        log.info("Starting scheduling thread");
+        log.info("Starting ct4j scheduling thread");
         schedulerThread = new Thread(null, this::schedulerThreadMain, CLUSTER_TASKS_SCHEDULER_THREAD);
         schedulerThread.setPriority(Thread.NORM_PRIORITY); // TODO: higher priority? configurable?
         schedulerThread.setUncaughtExceptionHandler((t, e) -> {
-            log.error("scheduler thread caught uncaught exception", e);
+            log.error("ct4j scheduler thread caught uncaught exception", e);
             // TODO: restart?
         });
         schedulerThread.start();
 
         if (taskPersistence.isClustered()) {
-            log.info("Starting scheduling cluster check-in thread");
+            log.info("Starting ct4j scheduling cluster check-in thread");
             checkinThread = new Thread(null, this::schedulerClusterHeartbeatThread, CLUSTER_TASKS_HEARTBEAT_THREAD);
             checkinThread.setPriority(Thread.MIN_PRIORITY); // TODO: higher priority? configurable?
             checkinThread.setUncaughtExceptionHandler((t, e) -> {
-                log.error("check-in thread caught uncaught exception", e);
+                log.error("ct4j check-in thread caught uncaught exception", e);
                 // TODO: restart?
             });
             checkinThread.start();

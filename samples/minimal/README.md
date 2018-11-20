@@ -1,10 +1,14 @@
 Minimal sample
 ============================
 
-Minimal sample with in-memory task storage
+Minimal sample with in-memory task storage. 
 
-Clustered: No  (in-memory task store)
+###### Description
+Runs 3 tasks that just write to log and then exits.
 
-Persistent: No (in-memory task store)
+###### Properties
+Clustered: No  (uses in-memory task store)
+
+Persistent: No (uses in-memory task store)
 
 

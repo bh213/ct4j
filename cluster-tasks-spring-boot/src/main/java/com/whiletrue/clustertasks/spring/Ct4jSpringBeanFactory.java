@@ -28,11 +28,11 @@ import javax.annotation.PostConstruct;
 @Configuration
 @EnableConfigurationProperties(ClusterTasksConfigurationProperties.class)
 @EnableJpaRepositories(basePackageClasses = ClusterTaskRepository.class)
-@EntityScan(basePackageClasses= ClusterTaskEntity.class)
+@EntityScan(basePackageClasses = ClusterTaskEntity.class)
 @Import(SpringTaskFactory.class)
-public class ClusterTasksSpring implements BeanFactoryAware {
+public class Ct4jSpringBeanFactory implements BeanFactoryAware {
 
-    private static Logger log = LoggerFactory.getLogger(ClusterTasksSpring.class);
+    private static Logger log = LoggerFactory.getLogger(Ct4jSpringBeanFactory.class);
     private final ClusterTasksConfigurationProperties configurationProperties;
     private TaskPersistence clusterTaskPersistence;
 
@@ -43,7 +43,7 @@ public class ClusterTasksSpring implements BeanFactoryAware {
 
 
     @Autowired
-    public ClusterTasksSpring( ClusterTasksConfigurationProperties configurationProperties) {
+    public Ct4jSpringBeanFactory(ClusterTasksConfigurationProperties configurationProperties) {
         this.configurationProperties = configurationProperties;
     }
 

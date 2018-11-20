@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import({ClusterTasksSpring.class})
+@Import({Ct4jSpringBeanFactory.class})
 @Documented
-public @interface EnableClusterTasks {
+public @interface EnableCt4j {
 }
