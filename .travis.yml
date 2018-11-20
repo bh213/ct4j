@@ -4,5 +4,5 @@ jdk:
   - openjdk11
 
 script:
-  - ./gradlew build --scan
+  - ./gradlew build
   - ./gradlew samples/minimal:bootRun
