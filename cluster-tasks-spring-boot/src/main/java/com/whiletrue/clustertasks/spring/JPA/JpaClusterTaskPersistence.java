@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,7 +37,7 @@ public class JpaClusterTaskPersistence extends TaskPersistenceBase {
 
     @Autowired
     public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterNodePersistence clusterNodePersistence, ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
-        super(log, timeProvider);
+        super(log, timeProvider, clusterTasksConfig);
         this.clusterTaskRepository = clusterTaskRepository;
         this.clusterNodePersistence = clusterNodePersistence;
         this.clusterInstanceNaming = clusterInstanceNaming;
@@ -193,78 +194,44 @@ public class JpaClusterTaskPersistence extends TaskPersistenceBase {
         return doQueueTask(task, input, startDelayInMilliseconds, priority, null);
     }
 
+
     @Override
-    public synchronized <INPUT> String registerScheduledTask(Task<INPUT> task, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) throws Exception{
+    protected <INPUT> List<? extends RecurringTaskEntity> findRecurringTasks(Class<? extends Task> taskClass, INPUT input, ScheduledTaskAction scheduledTaskAction, TaskConfig taskConfig) throws Exception{
 
-        return null;
-//        final Class<? extends Task> taskClass = task.getClass();
-//        final List<InMemoryTaskPersistence.TaskEntry> scheduledTasks = tasksInQueue.stream().filter(e -> e.taskClass.equals(taskClass) && (!scheduledTaskAction.isPerInput() || Objects.equals(input, e.input))).collect(Collectors.toList());
-//
-//        final RecurringSchedule newRecurringSchedule = RecurringSchedule.createNewRecurringSchedule(new RecurringScheduleStrategyFixed(periodInMilliseconds), timeProvider.getCurrent());
-//
-//
-//        if (scheduledTaskAction == ScheduledTaskAction.AlwaysAdd) {
-//            return doQueueTask(task, input, 0, null, newRecurringSchedule);
-//        }
-//
-//        if (scheduledTaskAction.isReplaceTasks()) {
-//
-//            if (scheduledTasks.size() > 0) {
-//                log.info("Replacing all {} recurring tasks {} as part of {} action. Deleting all of them and creating a single new one.", scheduledTasks.size(), taskClass, scheduledTaskAction);
-//                scheduledTasks.forEach(t -> deleteTask(t.taskId));
-//            }
-//            return doQueueTask(task, input, 0, null, newRecurringSchedule);
-//        }
-//        else if (!scheduledTaskAction.isReplaceTasks()){ // update tasks
-//
-//            if (scheduledTasks.size() > 1) {
-//                log.error("Found {} recurring tasks as part of {} action. Updating all of them.", scheduledTasks.size(), scheduledTaskAction);
-//            }
-//
-//            scheduledTasks.forEach(t -> {
-//                // TODO: anything else from task?
-//                // t.priority ??
-//                // t.taskConfig ??
-//
-//                log.info("Updating recurring task {} with new input & schedule", t.taskId);
-//
-//
-//                final String newStrategyString = newRecurringSchedule.getStrategy().toDatabaseString();
-//                if (!(Objects.equals(t.input, input) &&t.recurringSchedule.getStrategy().toDatabaseString().equals(newStrategyString))) {
-//                    log.info("Task {} input and/or schedule was changed, updating", t.taskId);
-//                    t.input = input;
-//                    t.recurringSchedule = newRecurringSchedule;
-//                } else  {
-//                    log.info("Task {} input and/or schedule was not changed, no operation performed", t.taskId);
-//                }
-//
-//            });
-//
-//            switch (scheduledTasks.size()) {
-//                case 0:
-//                    return doQueueTask(task, input, 0, null, newRecurringSchedule);
-//                case 1: return scheduledTasks.get(0).taskId;
-//                default:
-//                    return null; // TODO: return optional, return array???, error?
-//
-//            }
-//
-//        } else throw new IllegalArgumentException("Unknown unhandled scheduledTaskAction " + scheduledTaskAction);
+        var className = taskClass.getName();
+        if (scheduledTaskAction.isPerInput()) {
+            final String serializedInput = serializeInput(input, taskConfig);
+            return clusterTaskRepository.findRecurringTasksWithInput(className, serializedInput );
+        }
+        else return clusterTaskRepository.findRecurringTasks(className);
+    }
 
+    @Override
+    protected <INPUT> void updateRecurringTask(RecurringTaskEntity taskEntity, RecurringSchedule recurringSchedule, INPUT input, TaskConfig taskConfig) throws Exception {
+         ClusterTaskEntity cte = (ClusterTaskEntity) taskEntity;
+
+        final String newStrategyString = recurringSchedule.getStrategy().toDatabaseString();
+        final String serializedInput = serializeInput(input, taskConfig);
+
+        if (!(Objects.equals(cte.getInput(), serializedInput) && cte.getRecurringSchedule().equals(newStrategyString))) {
+            log.info("Task {} input and/or schedule was changed, updating", cte.getTaskId());
+
+            clusterTaskRepository.updateRecurringTasks(List.of(cte.getId()), newStrategyString, serializedInput);
+
+        } else  {
+            log.info("Task {} input and/or schedule was not changed, no operation performed", cte.getTaskId());
+        }
+    }
+
+    protected <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority, RecurringSchedule recurringSchedule) throws Exception {
+        TaskConfig taskConfig = getTaskConfig(task, clusterTasksConfig);
+        return doQueueTask(task, input, startDelayInMilliseconds, priority, recurringSchedule, taskConfig);
 
     }
 
-
-    private <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority, RecurringSchedule recurringSchedule) throws Exception {
-        TaskConfig taskConfig = getTaskConfig(task, clusterTasksConfig);
-
-        final String serializedInput;
-        try {
-            serializedInput = serializeInput(input);
-        } catch (JsonProcessingException e) {
-            log.error("Could not serialize input for task '{}', input '{}': {}", taskConfig.getTaskName(), input, e);
-            throw new Exception(e);
-        }
+    @Override
+    protected <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority, RecurringSchedule recurringSchedule, TaskConfig taskConfig) throws Exception {
+        final String serializedInput = serializeInput(input, taskConfig);
 
         if (input != null) {
             try {
@@ -295,6 +262,17 @@ public class JpaClusterTaskPersistence extends TaskPersistenceBase {
 
         final ClusterTaskEntity saved = clusterTaskRepository.save(entity);
         return Long.toString(saved.getId());
+    }
+
+    private <INPUT> String serializeInput(INPUT input, TaskConfig taskConfig) throws Exception{
+        final String serializedInput;
+        try {
+            serializedInput = serializeInput(input);
+        } catch (JsonProcessingException e) {
+            log.error("Could not serialize input for task '{}', input '{}': {}", taskConfig.getTaskName(), input, e);
+            throw new Exception(e);
+        }
+        return serializedInput;
     }
 
 

@@ -58,6 +58,19 @@ public interface ClusterTaskRepository extends JpaRepository<ClusterTaskEntity, 
     @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.lockedByInstanceId = ?1 AND ct.lockTime IS NOT NULL")
     List<ClusterTaskEntity> findLockedByInstance(String instanceId);
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.taskClass = ?1 AND ct.input = ?2 AND ct.recurringSchedule IS NOT NULL")
+    List<ClusterTaskEntity> findRecurringTasksWithInput(String taskClass, String input);
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Query("SELECT ct FROM ClusterTaskEntity ct WHERE ct.taskClass = ?1  AND ct.recurringSchedule IS NOT NULL")
+    List<ClusterTaskEntity> findRecurringTasks(String taskClass);
+
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Modifying
+    @Query("UPDATE ClusterTaskEntity ct SET ct.recurringSchedule = ?2, ct.input= ?3 WHERE ct.id IN ?1")
+    int updateRecurringTasks(Collection<Long> id, String recurringSchedule, String input);
 
 
 }
