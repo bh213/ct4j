@@ -54,6 +54,12 @@ public class StdTaskManager implements TaskManager {
     }
 
     @Override
+    public <INPUT, TASK extends Task<INPUT>> String registerScheduledTask(Class<TASK> taskClass, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) throws Exception {
+        Task<INPUT> instance = taskFactory.createInstance(taskClass);
+        return taskPersistence.registerScheduledTask(instance, input, periodInMilliseconds, scheduledTaskAction);
+    }
+
+    @Override
     public void stopScheduling() {
         scheduler.stopScheduling();
     }

@@ -49,6 +49,29 @@ public class ClusterTaskEntity {
     @Column(nullable = false, length = 16)
     private TaskStatus status;
 
+    @Column(nullable = true)
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date nextScheduledTime;
+
+    @Column(nullable = true, length = 128)
+    private String recurringSchedule;
+
+    public Date getNextScheduledTime() {
+        return nextScheduledTime;
+    }
+
+    public void setNextScheduledTime(Date nextScheduledTime) {
+        this.nextScheduledTime = nextScheduledTime;
+    }
+
+    public String getRecurringSchedule() {
+        return recurringSchedule;
+    }
+
+    public void setRecurringSchedule(String recurringSchedule) {
+        this.recurringSchedule = recurringSchedule;
+    }
+
     public ClusterTaskEntity() {
     }
 

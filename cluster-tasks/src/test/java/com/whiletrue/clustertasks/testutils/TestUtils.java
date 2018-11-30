@@ -17,7 +17,7 @@ public class TestUtils {
         final TaskConfig.TaskConfigBuilder builder = new TaskConfig.TaskConfigBuilder(config, null, task.getClass());
         if (builderAction != null) builderAction.accept(builder);
 
-        TaskWrapper<INPUT> wrapper = new TaskWrapper<INPUT>(task, input, new TaskExecutionContext(retry, clusterNodeId, taskId,taskName ), Instant.now(), builder.build());
+        TaskWrapper<INPUT> wrapper = new TaskWrapper<INPUT>(task, input, new TaskExecutionContext(retry, clusterNodeId, taskId,taskName, null ), Instant.now(), builder.build());
         return wrapper;
     }
 

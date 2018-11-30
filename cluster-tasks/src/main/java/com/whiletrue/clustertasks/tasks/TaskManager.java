@@ -59,6 +59,19 @@ public interface TaskManager {
 
     <INPUT, TASK extends Task<INPUT>> String queueTaskDelayed(Class<TASK> taskClass, INPUT input, long millisecondStartDelay, int priority) throws Exception;
 
+
+
+    <INPUT, TASK extends Task<INPUT>> String registerScheduledTask(Class<TASK> taskClass, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) throws Exception;
+
+
+
+
+
+
+
+
+
+
     /**
      * Stops task scheduler - new tasks will no longer run on this node. Scheduler is stopped by default.
      */

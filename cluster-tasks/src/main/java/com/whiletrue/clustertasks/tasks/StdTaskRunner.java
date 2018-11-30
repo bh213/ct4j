@@ -1,10 +1,12 @@
 package com.whiletrue.clustertasks.tasks;
 
 import com.whiletrue.clustertasks.scheduler.InternalTaskEvents;
+import com.whiletrue.clustertasks.tasks.recurring.RecurringSchedule;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,8 +47,8 @@ public class StdTaskRunner implements TaskRunner {
         final INPUT input = taskWrapper.getInput();
         final TaskExecutionContext taskExecutionContext = taskWrapper.getTaskExecutionContext();
 
-        log.debug("Running task with id '{}' and name '{}'", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
 
+        log.debug("Running {}task with id '{}' and name '{}'", taskExecutionContext.getRecurringSchedule().isPresent() ? "recurring " : "", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
 
         synchronized (this) {
             currentlyExecutingTasksList.add(taskWrapper);
@@ -73,8 +75,22 @@ public class StdTaskRunner implements TaskRunner {
                     log.error("Task with id {} has throw exception in onSuccess: {}", taskExecutionContext.getTaskId(), e);
                 }
                 // TODO: use db aggregator for unlock and change status so we can do batch update?
-                taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
-                log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+
+                if (taskExecutionContext.getRecurringSchedule().isPresent()) {
+
+                    final RecurringSchedule recurringSchedule = taskExecutionContext.getRecurringSchedule().get();
+                    final Instant scheduledRunAfterThis = recurringSchedule.calculateNextScheduledRun(recurringSchedule.getNextScheduledRun());
+
+                    // TODO: check if task deleted or updated
+                    taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, recurringSchedule.getNextScheduledRun(), scheduledRunAfterThis );
+
+                    log.info("Recurring task id '{}', name '{}' was successful, next scheduled run at {}", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName(), recurringSchedule.getNextScheduledRun());
+                } else {
+                    // TODO: check if task deleted or updated
+                    taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
+                    log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+                }
+
 
 
                 synchronized (this) {
@@ -100,6 +116,7 @@ public class StdTaskRunner implements TaskRunner {
                     handleRetry(taskWrapper, newRetryPolicy == null ? taskConfig.getRetryPolicy() : newRetryPolicy, taskExecutionContext, internalTaskEvents);
                 } catch (Exception e) {
                     log.error("Error handling retry for task {}:{}", taskExecutionContext.getTaskId(), e);
+                    // TODO: check if task deleted or updated ??
                     taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
                 }
                 synchronized (this) {
@@ -137,15 +154,31 @@ public class StdTaskRunner implements TaskRunner {
 
     <INPUT> void handleRetry(TaskWrapper<INPUT> taskWrapper, RetryPolicy retryPolicy, TaskExecutionContext taskExecutionContext, InternalTaskEvents internalTaskEvents) {
 
+
         final int maxRetries = retryPolicy == null ? clusterTasksConfig.getDefaultRetries() : retryPolicy.getMaxRetries();
         final int retryDelay = retryPolicy == null ? clusterTasksConfig.getDefaultRetryDelay() : retryPolicy.getRetryDelay();
         final float retryBackoffFactor = retryPolicy == null ? clusterTasksConfig.getDefaultRetryBackoffFactor() : retryPolicy.getRetryBackoffFactor();
 
-
         final int currentRetry = taskExecutionContext.getRetry();
+        final RecurringSchedule recurringSchedule = taskWrapper.getTaskExecutionContext().getRecurringSchedule().orElse(null);
         if (currentRetry == maxRetries) {
-            log.info("Task {} has exhausted all retries. {} out of {}. Marking as failure.", taskExecutionContext.getTaskId(), currentRetry, maxRetries);
-            taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+
+            if (recurringSchedule != null) {
+                final Instant nextScheduledRun = recurringSchedule.getNextScheduledRun();
+
+                log.info("Recurring task {} has exhausted all retries. {} out of {}. Next run will be as scheduled at {}.", taskExecutionContext.getTaskId(), currentRetry, maxRetries, nextScheduledRun);
+
+                final Instant scheduledRunAfterNext = recurringSchedule.calculateNextScheduledRun(nextScheduledRun);
+                // TODO: check if task deleted or updated
+                taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+
+            } else {
+                log.info("Task {} has exhausted all retries. {} out of {}. Marking as failure.", taskExecutionContext.getTaskId(), currentRetry, maxRetries);
+                // TODO: check if task deleted or updated
+                taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+
+            }
+
             try {
                 taskWrapper.getTask().onFailure(taskWrapper.getInput());
                 internalTaskEvents.taskFailed(taskWrapper, taskExecutionContext.getRetry());
@@ -156,7 +189,30 @@ public class StdTaskRunner implements TaskRunner {
         } else {
             final double calculatedDelay = retryDelay * Math.pow(retryBackoffFactor, currentRetry);
             log.info("Failed task {} scheduled for retry {} out of {}, delay {}", taskExecutionContext.getTaskId(), currentRetry + 1, maxRetries, calculatedDelay);
-            taskPersistence.unlockAndMarkForRetry(taskWrapper, currentRetry + 1, timeProvider.getCurrent().plusMillis((long) calculatedDelay));
+            final Instant nextRetryRun = timeProvider.getCurrent().plusMillis((long) calculatedDelay);
+            if (recurringSchedule != null) {
+                final Instant nextScheduledRun = recurringSchedule.getNextScheduledRun();
+                if (nextScheduledRun.isBefore(nextRetryRun)) {
+                    log.info("Failed recurring task {} retry {}/{} would run later than next scheduled recurring run. Reporting as failed, skipping remaining retries and scheduling as per recurring strategy", taskExecutionContext.getTaskId(), currentRetry+1 , maxRetries);
+
+
+                    final Instant scheduledRunAfterNext= recurringSchedule.calculateNextScheduledRun(nextScheduledRun);
+                    // TODO: check if task deleted or updated
+                    taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+
+                    try {
+                        taskWrapper.getTask().onFailure(taskWrapper.getInput());
+                        internalTaskEvents.taskFailed(taskWrapper, taskExecutionContext.getRetry());
+                    } catch (Exception e) {
+                        log.error("Error in task {} onFailure handler: {}", taskExecutionContext.getTaskId(), e);
+                    }
+
+                }
+
+            }
+
+            // TODO: check if task deleted or updated
+            taskPersistence.unlockAndMarkForRetry(taskWrapper, currentRetry + 1, nextRetryRun);
 
         }
     }

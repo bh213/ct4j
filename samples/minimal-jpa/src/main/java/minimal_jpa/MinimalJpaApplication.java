@@ -1,6 +1,7 @@
 package minimal_jpa;
 
 import com.whiletrue.clustertasks.spring.EnableCt4j;
+import com.whiletrue.clustertasks.tasks.ScheduledTaskAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -33,6 +34,7 @@ public class MinimalJpaApplication {
         taskManager.queueTask(SampleTask.class, "one");
         taskManager.queueTask(SampleTask.class, "two");
         taskManager.queueTask(SampleTask.class, "three");
+        taskManager.registerScheduledTask(SampleTask.class, "recurring", 3000, ScheduledTaskAction.SingletonTaskKeepExisting);
 
         };
     }

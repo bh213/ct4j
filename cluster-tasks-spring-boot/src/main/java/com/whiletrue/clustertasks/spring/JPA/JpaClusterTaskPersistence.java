@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
+import com.whiletrue.clustertasks.tasks.recurring.RecurringSchedule;
+import com.whiletrue.clustertasks.tasks.recurring.RecurringScheduleStrategy;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,11 +16,13 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class JpaClusterTaskPersistence implements TaskPersistence {
+public class JpaClusterTaskPersistence extends TaskPersistenceBase {
 
     private static Logger log = LoggerFactory.getLogger(JpaClusterTaskPersistence.class);
     private final ClusterTaskRepository clusterTaskRepository;
@@ -32,6 +36,7 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     @Autowired
     public JpaClusterTaskPersistence(ClusterTaskRepository clusterTaskRepository, ClusterNodePersistence clusterNodePersistence, ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
+        super(log, timeProvider);
         this.clusterTaskRepository = clusterTaskRepository;
         this.clusterNodePersistence = clusterNodePersistence;
         this.clusterInstanceNaming = clusterInstanceNaming;
@@ -109,7 +114,25 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
                 throw new RuntimeException(e);
             }
 
-            TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstanceNaming.getInstanceId(), entity.getId().toString(), entity.getName());
+            RecurringSchedule recurringSchedule = null;
+            try {
+                final String recurringScheduleStrategy = entity.getRecurringSchedule();
+                if (recurringScheduleStrategy != null && recurringScheduleStrategy.trim().length() > 0) {
+
+                    if (entity.getNextScheduledTime() == null ) {
+                        recurringSchedule = RecurringSchedule.createNewRecurringSchedule(RecurringScheduleStrategy.fromString(recurringScheduleStrategy), timeProvider.getCurrent());
+                    } else {
+                        recurringSchedule = RecurringSchedule.createExistingRecurringSchedule(RecurringScheduleStrategy.fromString(recurringScheduleStrategy), entity.getNextScheduledTime().toInstant());
+                    }
+
+
+                }
+            } catch (Exception e) {
+                log.error("Exception in taskConfig for task id {}:{}", entity.getId(), e);
+                throw new RuntimeException(e);
+            }
+
+            TaskExecutionContext taskExecutionContext = new TaskExecutionContext(entity.getRetryCount() == null ? 0 : entity.getRetryCount(), clusterInstanceNaming.getInstanceId(), entity.getId().toString(), entity.getName(), recurringSchedule);
             return new TaskWrapper<>(taskInstance, input, taskExecutionContext, entity.getLastUpdate().toInstant(), taskConfig);
         } catch (RuntimeException runtimeException) {
             clusterTaskRepository.unlockAndChangeTaskStatus(Collections.singletonList(entity.getId()), TaskStatus.Failure, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
@@ -151,33 +174,89 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     @Override
     public <INPUT> String queueTask(Task<INPUT> task, INPUT input) throws Exception {
-        return doQueueTask(task, input, 0, 0);
+        return doQueueTask(task, input, 0, 0, null);
     }
 
     @Override
     public <INPUT> String queueTask(Task<INPUT> task, INPUT input, int priority) throws Exception {
-        return doQueueTask(task, input, 0, priority);
+        return doQueueTask(task, input, 0, priority, null);
     }
 
     @Override
     public <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds) throws Exception {
 
-        return doQueueTask(task, input, startDelayInMilliseconds, null);
+        return doQueueTask(task, input, startDelayInMilliseconds, null, null);
     }
 
     @Override
     public <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, int priority) throws Exception {
-        return doQueueTask(task, input, startDelayInMilliseconds, priority);
+        return doQueueTask(task, input, startDelayInMilliseconds, priority, null);
+    }
+
+    @Override
+    public synchronized <INPUT> String registerScheduledTask(Task<INPUT> task, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) throws Exception{
+
+        return null;
+//        final Class<? extends Task> taskClass = task.getClass();
+//        final List<InMemoryTaskPersistence.TaskEntry> scheduledTasks = tasksInQueue.stream().filter(e -> e.taskClass.equals(taskClass) && (!scheduledTaskAction.isPerInput() || Objects.equals(input, e.input))).collect(Collectors.toList());
+//
+//        final RecurringSchedule newRecurringSchedule = RecurringSchedule.createNewRecurringSchedule(new RecurringScheduleStrategyFixed(periodInMilliseconds), timeProvider.getCurrent());
+//
+//
+//        if (scheduledTaskAction == ScheduledTaskAction.AlwaysAdd) {
+//            return doQueueTask(task, input, 0, null, newRecurringSchedule);
+//        }
+//
+//        if (scheduledTaskAction.isReplaceTasks()) {
+//
+//            if (scheduledTasks.size() > 0) {
+//                log.info("Replacing all {} recurring tasks {} as part of {} action. Deleting all of them and creating a single new one.", scheduledTasks.size(), taskClass, scheduledTaskAction);
+//                scheduledTasks.forEach(t -> deleteTask(t.taskId));
+//            }
+//            return doQueueTask(task, input, 0, null, newRecurringSchedule);
+//        }
+//        else if (!scheduledTaskAction.isReplaceTasks()){ // update tasks
+//
+//            if (scheduledTasks.size() > 1) {
+//                log.error("Found {} recurring tasks as part of {} action. Updating all of them.", scheduledTasks.size(), scheduledTaskAction);
+//            }
+//
+//            scheduledTasks.forEach(t -> {
+//                // TODO: anything else from task?
+//                // t.priority ??
+//                // t.taskConfig ??
+//
+//                log.info("Updating recurring task {} with new input & schedule", t.taskId);
+//
+//
+//                final String newStrategyString = newRecurringSchedule.getStrategy().toDatabaseString();
+//                if (!(Objects.equals(t.input, input) &&t.recurringSchedule.getStrategy().toDatabaseString().equals(newStrategyString))) {
+//                    log.info("Task {} input and/or schedule was changed, updating", t.taskId);
+//                    t.input = input;
+//                    t.recurringSchedule = newRecurringSchedule;
+//                } else  {
+//                    log.info("Task {} input and/or schedule was not changed, no operation performed", t.taskId);
+//                }
+//
+//            });
+//
+//            switch (scheduledTasks.size()) {
+//                case 0:
+//                    return doQueueTask(task, input, 0, null, newRecurringSchedule);
+//                case 1: return scheduledTasks.get(0).taskId;
+//                default:
+//                    return null; // TODO: return optional, return array???, error?
+//
+//            }
+//
+//        } else throw new IllegalArgumentException("Unknown unhandled scheduledTaskAction " + scheduledTaskAction);
+
+
     }
 
 
-    private <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority) throws Exception {
-        final Class<? extends Task> taskClass = Objects.requireNonNull(task).getClass();
-        final ClusterTask clusterTaskAnnotation = Utils.getClusterTaskAnnotation(taskClass);
-        final TaskConfig.TaskConfigBuilder builder = new TaskConfig.TaskConfigBuilder(clusterTasksConfig, clusterTaskAnnotation, taskClass);
-        TaskConfig taskConfig = task.configureTask(builder);
-        if (taskConfig == null) taskConfig = builder.build();
-
+    private <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority, RecurringSchedule recurringSchedule) throws Exception {
+        TaskConfig taskConfig = getTaskConfig(task, clusterTasksConfig);
 
         final String serializedInput;
         try {
@@ -204,10 +283,20 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
         entity.setRetryCount(null);
         entity.setInputClass(input != null ? input.getClass().getName() : null);
         entity.setStatus(TaskStatus.Pending);
-        entity.setNextRun(Date.from(timeProvider.getCurrent().plusMillis(startDelayInMilliseconds)));
+
+
+        if (recurringSchedule != null) {
+            entity.setNextRun(Date.from(recurringSchedule.getNextScheduledRun()));
+            entity.setNextScheduledTime(Date.from(recurringSchedule.calculateNextScheduledRun(recurringSchedule.getNextScheduledRun())));
+            entity.setRecurringSchedule(recurringSchedule.getStrategy().toDatabaseString());
+        } else {
+            entity.setNextRun(Date.from(timeProvider.getCurrent().plusMillis(startDelayInMilliseconds)));
+        }
+
         final ClusterTaskEntity saved = clusterTaskRepository.save(entity);
         return Long.toString(saved.getId());
     }
+
 
     @Override
     public void deleteTask(String id) {
@@ -226,9 +315,14 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
     }
 
     @Override
-    public void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant newScheduledTime) {
-        int count = clusterTaskRepository.unlockAndSetRetryCount(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(newScheduledTime), timeProvider.getCurrentDate());
+    public void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
+        int count = clusterTaskRepository.unlockAndSetRetryCount(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(nextRun), timeProvider.getCurrentDate());
 
+    }
+
+    @Override
+    public void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
+        int count = clusterTaskRepository.unlockAndSetRetryCountAndScheduledNextRun(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(nextRun), Date.from(nextScheduledRun));
     }
 
     @Override
@@ -248,6 +342,7 @@ public class JpaClusterTaskPersistence implements TaskPersistence {
 
     public void recoverTasks(String instanceId) {
         final List<ClusterTaskEntity> lockedByInstance = clusterTaskRepository.findLockedByInstance(instanceId);
+        // TODO:
     }
 
     @Override

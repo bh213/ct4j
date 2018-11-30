@@ -14,13 +14,19 @@ public interface TaskPersistence {
     <INPUT> String queueTask(Task<INPUT> task, INPUT input, int priority) throws Exception;
     <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds) throws Exception;
     <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, int priority) throws Exception;
+    <INPUT> String registerScheduledTask(Task<INPUT> instance, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) throws Exception;
+
+
+
 
     void deleteTask(String id);
     void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status);
-//    void setTaskRunning();
-//    void setTaskCancelled();
+//    TODO: void setTaskRunning();
+//    TODO: void setTaskCancelled();
 
-    void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant newScheduledTime);
+    void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun);
+    void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun);
+
 
     TaskWrapper<?> getTask(String taskId);
 
@@ -45,5 +51,6 @@ public interface TaskPersistence {
      * @return true if this persistence class stores task data permanently or false if data is lost after node is terminated
      */
     boolean isPersistent();
+
 
 }

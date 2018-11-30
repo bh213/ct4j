@@ -3,6 +3,8 @@ package com.whiletrue.clustertasks.inmemory;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
+import com.whiletrue.clustertasks.tasks.recurring.RecurringSchedule;
+import com.whiletrue.clustertasks.tasks.recurring.RecurringScheduleStrategyFixed;
 import com.whiletrue.clustertasks.timeprovider.TimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +15,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Collections.reverseOrder;
 
-public class InMemoryTaskPersistence implements TaskPersistence {
+public class InMemoryTaskPersistence extends TaskPersistenceBase {
     private static Logger log = LoggerFactory.getLogger(InMemoryTaskPersistence.class);
     private ClusterInstanceNaming clusterInstanceNaming;
     private TaskFactory taskFactory;
@@ -23,6 +25,7 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     private TimeProvider timeProvider;
 
     public InMemoryTaskPersistence(ClusterInstanceNaming clusterInstanceNaming, TaskFactory taskFactory, ClusterTasksConfig clusterTasksConfig, TimeProvider timeProvider) {
+        super(log, timeProvider);
         this.clusterInstanceNaming = clusterInstanceNaming;
         this.taskFactory = taskFactory;
         this.clusterTasksConfig = clusterTasksConfig;
@@ -32,7 +35,7 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     }
 
     private <INPUT> TaskWrapper<INPUT> createTaskWrapper(TaskEntry taskEntry) {
-        final Task instance;
+        final Task<INPUT> instance;
         try {
             instance = taskFactory.createInstance(taskEntry.taskClass);
         } catch (Exception e) {
@@ -41,9 +44,9 @@ public class InMemoryTaskPersistence implements TaskPersistence {
             taskEntry.startTime = null;
             throw new RuntimeException(e);
         }
-        final TaskExecutionContext taskExecutionContext = new TaskExecutionContext(taskEntry.retryCount, clusterInstanceNaming.getInstanceId(), taskEntry.taskId, taskEntry.name);
+        final TaskExecutionContext taskExecutionContext = new TaskExecutionContext(taskEntry.retryCount, clusterInstanceNaming.getInstanceId(), taskEntry.taskId, taskEntry.name, taskEntry.recurringSchedule);
 
-        return new TaskWrapper(instance, taskEntry.input, taskExecutionContext, taskEntry.lastUpdated, taskEntry.taskConfig);
+        return new TaskWrapper<>(instance, (INPUT) taskEntry.input, taskExecutionContext, taskEntry.lastUpdated, taskEntry.taskConfig);
     }
 
     @Override
@@ -85,50 +88,114 @@ public class InMemoryTaskPersistence implements TaskPersistence {
 
     @Override
     public <INPUT> String queueTask(Task<INPUT> task, INPUT input) throws Exception {
-        return doQueueTask(task, input, 0, null);
+        return doQueueTask(task, input, 0, null, null);
     }
 
     @Override
     public <INPUT> String queueTask(Task<INPUT> task, INPUT input, int priority) throws Exception {
-        return doQueueTask(task, input, 0, priority);
+        return doQueueTask(task, input, 0, priority, null);
     }
 
     @Override
     public <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds) throws Exception {
-        return doQueueTask(task, input, startDelayInMilliseconds, null);
+        return doQueueTask(task, input, startDelayInMilliseconds, null, null);
     }
 
     @Override
     public synchronized <INPUT> String queueTaskDelayed(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, int priority) throws Exception {
-        return doQueueTask(task, input, startDelayInMilliseconds, priority);
+        return doQueueTask(task, input, startDelayInMilliseconds, priority, null);
     }
 
-    private <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority) {
-        final Class<? extends Task> taskClass = Objects.requireNonNull(task).getClass();
-        final ClusterTask clusterTaskAnnotation = Utils.getClusterTaskAnnotation(taskClass);
-        final TaskConfig.TaskConfigBuilder builder = new TaskConfig.TaskConfigBuilder(clusterTasksConfig, clusterTaskAnnotation, taskClass);
-        TaskConfig taskConfig = task.configureTask(builder);
-        if (taskConfig == null) taskConfig = builder.build();
+    @Override
+    public synchronized <INPUT> String registerScheduledTask(Task<INPUT> task, INPUT input, int periodInMilliseconds, ScheduledTaskAction scheduledTaskAction) {
+
+        final Class<? extends Task> taskClass = task.getClass();
+        final List<TaskEntry> scheduledTasks = tasksInQueue.stream().filter(e -> e.taskClass.equals(taskClass) && (!scheduledTaskAction.isPerInput() || Objects.equals(input, e.input))).collect(Collectors.toList());
+
+        final RecurringSchedule newRecurringSchedule = RecurringSchedule.createNewRecurringSchedule(new RecurringScheduleStrategyFixed(periodInMilliseconds), timeProvider.getCurrent());
+
+
+        if (scheduledTaskAction == ScheduledTaskAction.AlwaysAdd) {
+            return doQueueTask(task, input, 0, null, newRecurringSchedule);
+        }
+
+        if (scheduledTaskAction.isReplaceTasks()) {
+
+            if (scheduledTasks.size() > 0) {
+                log.info("Replacing all {} recurring tasks {} as part of {} action. Deleting all of them and creating a single new one.", scheduledTasks.size(), taskClass, scheduledTaskAction);
+                scheduledTasks.forEach(t -> deleteTask(t.taskId));
+            }
+            return doQueueTask(task, input, 0, null, newRecurringSchedule);
+        }
+        else if (!scheduledTaskAction.isReplaceTasks()){ // update tasks
+
+            if (scheduledTasks.size() > 1) {
+                log.error("Found {} recurring tasks as part of {} action. Updating all of them.", scheduledTasks.size(), scheduledTaskAction);
+            }
+
+            scheduledTasks.forEach(t -> {
+                // TODO: anything else from task?
+                // t.priority ??
+                // t.taskConfig ??
+
+                log.info("Updating recurring task {} with new input & schedule", t.taskId);
+
+
+                final String newStrategyString = newRecurringSchedule.getStrategy().toDatabaseString();
+                if (!(Objects.equals(t.input, input) &&t.recurringSchedule.getStrategy().toDatabaseString().equals(newStrategyString))) {
+                    log.info("Task {} input and/or schedule was changed, updating", t.taskId);
+                    t.input = input;
+                    t.recurringSchedule = newRecurringSchedule;
+                } else  {
+                    log.info("Task {} input and/or schedule was not changed, no operation performed", t.taskId);
+                }
+
+            });
+
+            switch (scheduledTasks.size()) {
+                case 0:
+                    return doQueueTask(task, input, 0, null, newRecurringSchedule);
+                case 1: return scheduledTasks.get(0).taskId;
+                default:
+                    return null; // TODO: return optional, return array???, error?
+
+            }
+
+        } else throw new IllegalArgumentException("Unknown unhandled scheduledTaskAction " + scheduledTaskAction);
+
+
+    }
+
+    private synchronized <INPUT> String doQueueTask(Task<INPUT> task, INPUT input, long startDelayInMilliseconds, Integer priority, RecurringSchedule recurringSchedule) {
+
+        TaskConfig taskConfig = getTaskConfig(task, clusterTasksConfig);
 
         TaskEntry entry = new TaskEntry(taskConfig.getTaskName());
         entry.input = input;
 
-        entry.lastUpdated = timeProvider.getCurrent();
-        entry.nextRun = timeProvider.getCurrent().plusMillis(startDelayInMilliseconds);
+        final Instant current = timeProvider.getCurrent();
+        entry.lastUpdated = current;
         entry.priority = priority != null ? priority : taskConfig.getPriority();
         entry.retryCount = 0;
-        entry.taskClass = taskClass;
+        entry.taskClass = task.getClass();
         entry.taskConfig = taskConfig;
         entry.taskStatus = TaskStatus.Pending;
+        entry.recurringSchedule = recurringSchedule;
+        if (recurringSchedule != null) {
+            entry.nextRun = recurringSchedule.getStrategy().nextRunTime(current).plusMillis(startDelayInMilliseconds);
+
+        } else {
+            entry.nextRun = current.plusMillis(startDelayInMilliseconds);
+        }
 
         if (startDelayInMilliseconds == 0) tasksInQueue.add(entry);
         else waitingTasks.add(entry);
         return entry.taskId;
     }
 
-    private TaskEntry findTask(String taskId) {
-        final Optional<TaskEntry> entry = tasksInQueue.stream().filter(e -> e.taskId == taskId).findFirst();
-        return entry.orElseGet(() -> waitingTasks.stream().filter(e -> e.taskId == taskId).findFirst().orElse(null));
+    private synchronized TaskEntry findTask(String taskId) {
+        final Optional<TaskEntry> entry = tasksInQueue.stream().filter(e -> e.taskId.equals(taskId)).findFirst();
+        return entry.orElseGet(() -> waitingTasks.stream().filter(e -> e.taskId.equals(taskId)).findFirst().orElse(null));
     }
 
     private TaskEntry findTask(TaskWrapper wrapper) {
@@ -163,15 +230,28 @@ public class InMemoryTaskPersistence implements TaskPersistence {
     }
 
     @Override
-    public synchronized void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant newScheduledTime) {
+    public synchronized void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
         final TaskEntry entry = findTask(task);
         entry.retryCount = retryCount;
-        entry.nextRun = newScheduledTime;
+        entry.nextRun = nextRun;
         entry.taskStatus = TaskStatus.Pending;
         entry.startTime = null;
         removeTask(entry);
         waitingTasks.add(entry);
     }
+
+    @Override
+    public void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
+        final TaskEntry entry = findTask(task);
+        entry.retryCount = retryCount;
+        entry.nextRun = nextRun;
+        entry.taskStatus = TaskStatus.Pending;
+        entry.startTime = null;
+        Objects.requireNonNull(entry.recurringSchedule, "recurringSchedule must be set").setNextScheduledRun(nextScheduledRun);
+        removeTask(entry);
+        waitingTasks.add(entry);
+    }
+
 
     @Override
     public synchronized TaskWrapper<?> getTask(String taskId) {
@@ -218,8 +298,10 @@ public class InMemoryTaskPersistence implements TaskPersistence {
         public Instant lastUpdated;
         public int priority;
         public Instant nextRun;
+        public RecurringSchedule recurringSchedule;
         public TaskStatus taskStatus;
         public Instant startTime;
+
         public TaskEntry(String name) {
             this.name = name;
             taskId = UUID.randomUUID().toString();

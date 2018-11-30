@@ -1,5 +1,9 @@
 package com.whiletrue.clustertasks.tasks;
 
+import com.whiletrue.clustertasks.tasks.recurring.RecurringSchedule;
+
+import java.util.Optional;
+
 /**
  * Task execution data that is passed to task's run method
  */
@@ -10,15 +14,21 @@ public class TaskExecutionContext {
     private String taskName;
     private Long startTime;
     private Long endTime;
+    private Optional<RecurringSchedule> recurringSchedule;
 
 
-    public TaskExecutionContext(int retry, String clusterNodeId, String taskId, String taskName) {
+    public TaskExecutionContext(int retry, String clusterNodeId, String taskId, String taskName, RecurringSchedule recurringScheduleStrategy) {
         this.retry = retry;
         this.clusterNodeId = clusterNodeId;
         this.taskId = taskId;
         this.taskName = taskName;
         this.startTime = null;
         this.endTime = null;
+        this.recurringSchedule = Optional.ofNullable(recurringScheduleStrategy);
+    }
+
+    public Optional<RecurringSchedule> getRecurringSchedule() {
+        return recurringSchedule;
     }
 
     public int getRetry() {
