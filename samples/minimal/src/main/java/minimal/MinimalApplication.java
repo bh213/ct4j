@@ -1,7 +1,6 @@
 package minimal;
 
 import com.whiletrue.clustertasks.spring.EnableCt4j;
-import com.whiletrue.clustertasks.tasks.ScheduledTaskAction;
 import com.whiletrue.clustertasks.tasks.TaskManager;
 import com.whiletrue.clustertasks.tasks.TaskStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,8 +37,6 @@ public class MinimalApplication {
             list.add(taskManager.queueTask(SampleTask.class, "one"));
             list.add(taskManager.queueTask(SampleTask.class, "two"));
             list.add(taskManager.queueTask(SampleTask.class, "three"));
-
-            list.add(taskManager.registerScheduledTask(SampleTask.class, "123", 1000, ScheduledTaskAction.SingletonTaskReplace));
 
 
             while (!list.stream().allMatch(taskId-> taskManager.getTaskStatus(taskId) == TaskStatus.Success)) {
