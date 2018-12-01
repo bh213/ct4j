@@ -115,7 +115,7 @@ public class AutowiredTask extends Task<String> {
 
 # Samples
 
-[List of samples](samples/README.md) 
+[List of samples](samples) 
 
 
 
