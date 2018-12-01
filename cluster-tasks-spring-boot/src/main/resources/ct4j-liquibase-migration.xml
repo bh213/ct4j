@@ -51,12 +51,18 @@
             </column>
 
 
-            <column name="input" type="text">
+            <column name="input" type="varchar(1048576)">
                 <constraints nullable="false"/>
             </column>
 
             <column name="input_class" type="varchar(256)">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="next_scheduled_time" type="timestamp">
+            </column>
+
+            <column name="recurring_schedule" type="varchar(128)">
             </column>
 
 

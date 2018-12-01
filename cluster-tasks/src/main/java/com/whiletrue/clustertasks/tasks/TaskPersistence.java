@@ -20,12 +20,12 @@ public interface TaskPersistence {
 
 
     void deleteTask(String id);
-    void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status);
+    boolean unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status);
 //    TODO: void setTaskRunning();
 //    TODO: void setTaskCancelled();
 
-    void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun);
-    void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun);
+    boolean unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun);
+    boolean unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun);
 
 
     TaskWrapper<?> getTask(String taskId);

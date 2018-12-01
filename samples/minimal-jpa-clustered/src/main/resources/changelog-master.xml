@@ -8,12 +8,4 @@
     <include file="classpath:ct4j-liquibase-migration.xml"/>
 
 
-
-    <changeSet id="buga-123" author="bh213">
-        <createTable tableName="test-table">
-            <column name="id" type="bigint">
-            </column>
-        </createTable>
-    </changeSet>
-
 </databaseChangeLog>

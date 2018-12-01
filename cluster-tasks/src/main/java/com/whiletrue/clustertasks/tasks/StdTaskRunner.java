@@ -82,13 +82,22 @@ public class StdTaskRunner implements TaskRunner {
                     final Instant scheduledRunAfterThis = recurringSchedule.calculateNextScheduledRun(recurringSchedule.getNextScheduledRun());
 
                     // TODO: check if task deleted or updated
-                    taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, recurringSchedule.getNextScheduledRun(), scheduledRunAfterThis );
+                    final boolean updateSuccessful = taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, recurringSchedule.getNextScheduledRun(), scheduledRunAfterThis );
+                    if (updateSuccessful) {
+                        log.info("Recurring task id '{}', name '{}' was successful, next scheduled run at {}", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName(), recurringSchedule.getNextScheduledRun());
+                    } else {
+                        log.warn("Recurring task id '{}', name '{}' was successful but unlockAndMarkForRetryAndSetScheduledNextRun was not, task was probably deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+                    }
 
-                    log.info("Recurring task id '{}', name '{}' was successful, next scheduled run at {}", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName(), recurringSchedule.getNextScheduledRun());
+
                 } else {
                     // TODO: check if task deleted or updated
-                    taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
-                    log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+                    final boolean updateSuccessful = taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Success);
+                    if (updateSuccessful) {
+                        log.info("Task id '{}', name '{}' was successful", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+                    } else {
+                        log.warn("Task id '{}', name '{}' was successfully executed but unlockAndChangeStatus was not, probably because task was deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
+                    }
                 }
 
 
@@ -117,7 +126,9 @@ public class StdTaskRunner implements TaskRunner {
                 } catch (Exception e) {
                     log.error("Error handling retry for task {}:{}", taskExecutionContext.getTaskId(), e);
                     // TODO: check if task deleted or updated ??
-                    taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+                    final boolean updateSuccessful = taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+                    if (!updateSuccessful) log.warn("Task id '{}', name '{}' could not be updated to {} state", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName(), TaskStatus.Failure);
+
                 }
                 synchronized (this) {
                     currentlyExecutingTasksList.remove(taskWrapper);
@@ -170,12 +181,14 @@ public class StdTaskRunner implements TaskRunner {
 
                 final Instant scheduledRunAfterNext = recurringSchedule.calculateNextScheduledRun(nextScheduledRun);
                 // TODO: check if task deleted or updated
-                taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+                final var updateSuccessful = taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+                if (!updateSuccessful) log.warn("Task id '{}', name '{}' unlockAndMarkForRetryAndSetScheduledNextRun was not successful, task was probably deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
 
             } else {
                 log.info("Task {} has exhausted all retries. {} out of {}. Marking as failure.", taskExecutionContext.getTaskId(), currentRetry, maxRetries);
                 // TODO: check if task deleted or updated
-                taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+                final var updateSuccessful =  taskPersistence.unlockAndChangeStatus(Collections.singletonList(taskWrapper), TaskStatus.Failure);
+                if (!updateSuccessful) log.warn("Task id '{}', name '{}' unlockAndChangeStatus to {} was not successful, task was probably deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName(), TaskStatus.Failure);
 
             }
 
@@ -198,7 +211,8 @@ public class StdTaskRunner implements TaskRunner {
 
                     final Instant scheduledRunAfterNext= recurringSchedule.calculateNextScheduledRun(nextScheduledRun);
                     // TODO: check if task deleted or updated
-                    taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+                    final boolean updateSuccessful = taskPersistence.unlockAndMarkForRetryAndSetScheduledNextRun(taskWrapper, 0, nextScheduledRun, scheduledRunAfterNext);
+                    if (!updateSuccessful) log.warn("Task id '{}', name '{}' unlockAndMarkForRetryAndSetScheduledNextRun was not successful, task was probably deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
 
                     try {
                         taskWrapper.getTask().onFailure(taskWrapper.getInput());
@@ -212,7 +226,8 @@ public class StdTaskRunner implements TaskRunner {
             }
 
             // TODO: check if task deleted or updated
-            taskPersistence.unlockAndMarkForRetry(taskWrapper, currentRetry + 1, nextRetryRun);
+            final boolean updateSuccessful = taskPersistence.unlockAndMarkForRetry(taskWrapper, currentRetry + 1, nextRetryRun);
+            if (!updateSuccessful) log.warn("Task id '{}', name '{}' unlockAndMarkForRetry was not successful, task was probably deleted", taskExecutionContext.getTaskId(), taskExecutionContext.getTaskName());
 
         }
     }

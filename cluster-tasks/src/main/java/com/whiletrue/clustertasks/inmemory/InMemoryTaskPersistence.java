@@ -75,6 +75,7 @@ public class InMemoryTaskPersistence extends TaskPersistenceBase {
         final Instant now = timeProvider.getCurrent();
         for (TaskWrapper<?> task : tasks) {
             final TaskEntry entry = findTask(task);
+            if (entry == null) continue;
             if (entry.taskStatus == TaskStatus.Pending && entry.startTime == null) {
                 entry.startTime = now;
                 entry.taskStatus = TaskStatus.Claimed;
@@ -177,7 +178,8 @@ public class InMemoryTaskPersistence extends TaskPersistenceBase {
     }
 
     @Override
-    public synchronized void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status) {
+    public synchronized boolean unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status) {
+        boolean retVal = false;
         for (TaskWrapper<?> task : tasks) {
             final TaskEntry entry = findTask(task);
             if (entry != null) {
@@ -185,31 +187,33 @@ public class InMemoryTaskPersistence extends TaskPersistenceBase {
                 entry.startTime = null;
                 removeTask(entry);
                 waitingTasks.add(entry);
-            }
+                retVal = true;
+            };
         }
+        return retVal;
     }
 
     @Override
-    public synchronized void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
+    public synchronized boolean unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
+        return unlockAndMarkForRetryImpl(task, retryCount, nextRun, null, false);
+    }
+
+    @Override
+    public synchronized boolean unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
+        return unlockAndMarkForRetryImpl(task, retryCount, nextRun, nextScheduledRun, true);
+    }
+
+    private boolean unlockAndMarkForRetryImpl(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun, boolean isRecurring) {
         final TaskEntry entry = findTask(task);
+        if (entry == null) return false;
         entry.retryCount = retryCount;
         entry.nextRun = nextRun;
         entry.taskStatus = TaskStatus.Pending;
         entry.startTime = null;
+        if (isRecurring) Objects.requireNonNull(entry.recurringSchedule, "recurringSchedule must be set").setNextScheduledRun(nextScheduledRun);
         removeTask(entry);
         waitingTasks.add(entry);
-    }
-
-    @Override
-    public void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
-        final TaskEntry entry = findTask(task);
-        entry.retryCount = retryCount;
-        entry.nextRun = nextRun;
-        entry.taskStatus = TaskStatus.Pending;
-        entry.startTime = null;
-        Objects.requireNonNull(entry.recurringSchedule, "recurringSchedule must be set").setNextScheduledRun(nextScheduledRun);
-        removeTask(entry);
-        waitingTasks.add(entry);
+        return true;
     }
 
 
@@ -221,7 +225,7 @@ public class InMemoryTaskPersistence extends TaskPersistenceBase {
     }
 
     @Override
-    public TaskStatus getTaskStatus(String taskId) {
+    public synchronized TaskStatus getTaskStatus(String taskId) {
         final TaskEntry entry = findTask(Objects.requireNonNull(taskId));
         if (entry == null) return null;
         return entry.taskStatus;

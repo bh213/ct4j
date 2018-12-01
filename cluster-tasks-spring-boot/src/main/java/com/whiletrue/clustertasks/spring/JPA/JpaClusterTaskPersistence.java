@@ -287,20 +287,23 @@ public class JpaClusterTaskPersistence extends TaskPersistenceBase {
     }
 
     @Override
-    public void unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status) {
+    public boolean unlockAndChangeStatus(List<TaskWrapper<?>> tasks, TaskStatus status) {
         int count = clusterTaskRepository.unlockAndChangeTaskStatus(tasks.stream().map(this::getTaskPrimaryKey).collect(Collectors.toList()), status, clusterInstanceNaming.getInstanceId(), timeProvider.getCurrentDate());
-
+        return count > 0; // TODO: count == tasks.size()?
     }
 
     @Override
-    public void unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
+    public boolean unlockAndMarkForRetry(TaskWrapper<?> task, int retryCount, Instant nextRun) {
         int count = clusterTaskRepository.unlockAndSetRetryCount(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(nextRun), timeProvider.getCurrentDate());
+        return count > 0;
 
     }
 
     @Override
-    public void unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
+    public boolean  unlockAndMarkForRetryAndSetScheduledNextRun(TaskWrapper<?> task, int retryCount, Instant nextRun, Instant nextScheduledRun) {
+
         int count = clusterTaskRepository.unlockAndSetRetryCountAndScheduledNextRun(getTaskPrimaryKey(task), clusterInstanceNaming.getInstanceId(), retryCount, Date.from(nextRun), Date.from(nextScheduledRun));
+        return count > 0;
     }
 
     @Override
@@ -320,7 +323,7 @@ public class JpaClusterTaskPersistence extends TaskPersistenceBase {
 
     public void recoverTasks(String instanceId) {
         final List<ClusterTaskEntity> lockedByInstance = clusterTaskRepository.findLockedByInstance(instanceId);
-        // TODO:
+        // TODO: implement this
     }
 
     @Override

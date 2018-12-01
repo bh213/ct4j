@@ -1,21 +1,23 @@
 package com.whiletrue.clustertasks.scheduler;
 
 
+import com.whiletrue.clustertasks.config.FixedTimeProvider;
 import com.whiletrue.clustertasks.factory.TaskFactory;
 import com.whiletrue.clustertasks.inmemory.DefaultConstructorTaskFactory;
 import com.whiletrue.clustertasks.inmemory.InMemoryTaskPersistence;
 import com.whiletrue.clustertasks.instanceid.ClusterInstanceNaming;
 import com.whiletrue.clustertasks.tasks.*;
-import com.whiletrue.clustertasks.config.FixedTimeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
-import com.whiletrue.clustertasks.tasks.NoOpTestTask;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +45,7 @@ public class TestSchedulerIntegration {
         final ClusterTasksConfigImpl clusterTasksConfig = new ClusterTasksConfigImpl();
         clusterTasksConfig.setMaximumPollingTimeMilliseconds(100);
         clusterTasksConfig.setMinimumPollingTimeMilliseconds(1);
-                taskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, clusterTasksConfig, fixedTimeProvider);
+        taskPersistence = new InMemoryTaskPersistence(clusterInstanceNaming, taskFactory, clusterTasksConfig, fixedTimeProvider);
         TaskRunner taskRunner = new StdTaskRunner(taskPersistence, clusterTasksConfig, fixedTimeProvider);
         scheduler = new Scheduler(taskPersistence, taskRunner, clusterTasksConfig, fixedTimeProvider);
     }
@@ -95,11 +97,12 @@ public class TestSchedulerIntegration {
 
         scheduler.startScheduling();
 
+
         assertTimeout(ofSeconds(3), () -> {
-                    while (taskPersistence.countPendingTasks() > 0) {
-                        Thread.sleep(100);
-                    }
-                });
+            while (taskPersistence.countPendingTasks() > 0) {
+                Thread.sleep(100);
+            }
+        });
         scheduler.stopScheduling();
 
         for (String taskId : tasks) {
@@ -111,4 +114,24 @@ public class TestSchedulerIntegration {
                     .isEqualTo(TaskStatus.Success);
         }
     }
+
+    @ParameterizedTest
+    @DisplayName("scheduler runs large number of tasks")
+    @EnumSource(ScheduledTaskAction.class)
+    public void testScheduledTasks(ScheduledTaskAction action) throws Exception {
+
+        var counter = new AtomicInteger();
+        scheduler.startScheduling();
+
+        for (int i = 0; i < 100; i++) {
+            final String taskId = taskPersistence.registerScheduledTask(new AtomicCounterTask(), counter, 1, action);
+            fixedTimeProvider.plusMillis(1);
+            Thread.sleep(5);
+        }
+        scheduler.stopScheduling();
+        assertThat(counter.get()).isGreaterThan(100);
+
+
+    }
+
 }

@@ -21,6 +21,7 @@ public class ClusterTaskEntity implements TaskPersistenceBase.RecurringTaskEntit
     @Column(nullable = false, length = 256)
     private String taskClass;
 
+    @Column(nullable = true, length = 1024*1024) // TODO: check
     private String input;
 
     @Column(nullable = true, length = 256)
