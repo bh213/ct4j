@@ -21,9 +21,16 @@ before_install:
 - openssl aes-256-cbc -K $encrypted_f594690c56da_key -iv $encrypted_f594690c56da_iv
   -in $ENCRYPTED_GPG_KEY_LOCATION -out $GPG_KEY_LOCATION -d
 deploy:
-  provider: script
-  script: "./gradlew uploadArchives -i"
-  skip_cleanup: true
-  on:
-    branch: master
-    condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false"
+  - provider: script
+    script: "./gradlew uploadArchives -i"
+    skip_cleanup: true
+    on:
+      branch: master
+      condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false"
+
+  - provider: script
+    script: "./gradlew uploadArchives closeAndReleaseRepository -i"
+    skip_cleanup: true
+    on:
+      branch: "/^release.*$/"
+      condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false"
