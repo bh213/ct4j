@@ -21,4 +21,5 @@ deploy:
   script: "./gradlew uploadArchives"
   on:
     branch: master
-    condition: type = push && jdk = openjdk11
+    condition: type = push
+    jdk: openjdk11
