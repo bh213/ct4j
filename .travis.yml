@@ -21,5 +21,4 @@ deploy:
   script: "./gradlew uploadArchives"
   on:
     branch: master
-    condition: type = push
-    jdk: openjdk11
+    condition: $TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false
