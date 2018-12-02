@@ -22,14 +22,14 @@ before_install:
   -in $ENCRYPTED_GPG_KEY_LOCATION -out $GPG_KEY_LOCATION -d
 deploy:
   - provider: script
-    script: "./gradlew uploadArchives -i"
+    script: "./gradlew publish -i"
     skip_cleanup: true
     on:
       branch: master
       condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false"
 
   - provider: script
-    script: "./gradlew uploadArchives closeAndReleaseRepository -i"
+    script: "./gradlew publish closeAndReleaseRepository -i"
     skip_cleanup: true
     on:
       all_branches: true
