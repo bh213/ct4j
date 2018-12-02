@@ -1,8 +1,8 @@
 package minimal;
 
-import com.whiletrue.clustertasks.spring.EnableCt4j;
-import com.whiletrue.clustertasks.tasks.TaskManager;
-import com.whiletrue.clustertasks.tasks.TaskStatus;
+import com.whiletrue.ct4j.spring.EnableCt4j;
+import com.whiletrue.ct4j.tasks.TaskManager;
+import com.whiletrue.ct4j.tasks.TaskStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

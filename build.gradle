@@ -1,21 +1,24 @@
-allprojects {
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.12.0"
+    }
+}
+
+apply plugin: 'io.codearte.nexus-staging'
+
+subprojects {
     version = VERSION_NAME
     group = GROUP
     buildDir = "${project.rootDir}/build/${rootProject.name}/${project.name}"
     apply plugin: 'java'
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-}
+    uploadArchives.enabled = false
 
-wrapper {
-    gradleVersion = '4.10.2'
-}
 
-def isReleaseBuild() {
-    return version.contains("SNAPSHOT") == false
-}
-
-subprojects {
     tasks.withType(Test) {
 
         afterSuite { desc, result ->
@@ -28,6 +31,132 @@ subprojects {
         }
     }
 }
+
+wrapper {
+    gradleVersion = '4.10.2'
+}
+
+// ------------------------------------------------
+//
+// Publish to maven central
+//
+// ------------------------------------------------
+
+
+["ct4j", "ct4j-spring-boot"].each {
+
+     project(":$it") {
+
+         apply plugin: 'maven-publish'
+         apply plugin: 'maven'
+
+         if (System.getenv('SONATYPE_USERNAME')) {
+
+            apply plugin: 'signing'
+
+
+
+            def gpgKeyLocation = System.getenv('GPG_KEY_LOCATION')
+            def sonaTypeUsername = System.getenv('SONATYPE_USERNAME')
+            def sonaTypepassword = System.getenv('SONATYPE_PASSWORD')
+
+
+            uploadArchives.enabled = true
+
+            ext."signing.keyId" = System.getenv('GPG_KEY_ID')
+            ext."signing.secretKeyRingFile" = "${project.rootDir}/${gpgKeyLocation}"
+            ext."signing.password" = System.getenv('GPG_PASSPHRASE')
+
+            nexusStaging {
+                packageGroup = "com.whiletrue" //optional if packageGroup == project.getGroup()
+                username = sonaTypeUsername
+                password = sonaTypepassword
+            }
+
+            task javadocJar(type: Jar) {
+                classifier = 'javadoc'
+                from javadoc
+            }
+
+            task sourcesJar(type: Jar) {
+                classifier = 'sources'
+                from sourceSets.main.allSource
+            }
+
+            artifacts {
+                archives javadocJar, sourcesJar
+            }
+
+            signing {
+                sign configurations.archives
+            }
+
+            uploadArchives {
+
+
+                repositories {
+                    // see: http://central.sonatype.org/pages/gradle.html
+                    mavenDeployer {
+                        beforeDeployment {
+                            MavenDeployment deployment -> signing.signPom(deployment)
+                        }
+
+                        repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2") {
+                            authentication(userName: sonaTypeUsername, password: sonaTypepassword)
+                        }
+
+                        snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots") {
+                            authentication(userName: sonaTypeUsername, password: sonaTypepassword)
+                        }
+
+                        pom.project {
+                            name project.name
+                            packaging 'jar'
+                            description project.description
+
+                            url 'https://github.com/bh213/ct4j'
+                            scm {
+                                connection 'scm:git:https://github.com/bh213/ct4j.git'
+                                developerConnection 'scm:git:git@github.com:bh213/ct4j.git'
+                                url 'https://github.com/bh213/ct4j.git'
+                            }
+
+                            licenses {
+                                license {
+                                    name 'MIT'
+                                    url 'https://opensource.org/licenses/MIT'
+                                    distribution 'repo'
+                                }
+                            }
+
+                            developers {
+                                developer {
+                                    id = 'bh213'
+                                    name = 'Gorazd Breskvar'
+                                    email = 'gorazd.breskvar@whiletrue.com'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+gradle.taskGraph.whenReady { taskGraph ->
+
+    // Do not sign archives by default (a local build without gpg keyring should succeed)
+    if (taskGraph.allTasks.any { it.name == 'build' || it.name == 'assemble' }) {
+        tasks.findAll {
+            it.name == 'signArchives' || it.name == 'signDocsJar' || it.name == 'signTestJar'
+        }.each { task ->
+            task.enabled = false
+        }
+    }
+}
+
 
 
 

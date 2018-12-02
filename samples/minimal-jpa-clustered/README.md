@@ -6,7 +6,7 @@ Clustered: Yes
 Persistent: Yes 
 
 ### Database migration by liquibase 
-Migration script is provided by `com.whiletrue:cluster-tasks-spring-boot` and is stored in `classpath:ct4j-liquibase-migration.xml`)
+Migration script is provided by `com.whiletrue:ct4j-spring-boot` and is stored in `classpath:ct4j-liquibase-migration.xml`)
 
 ### Running this sample
 

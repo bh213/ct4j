@@ -3,11 +3,11 @@ package com.whiletrue.sample;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
-import com.whiletrue.clustertasks.tasks.BasicTaskInfo;
-import com.whiletrue.clustertasks.tasks.StdTaskRunner;
-import com.whiletrue.clustertasks.tasks.TaskCallbacksListener;
-import com.whiletrue.clustertasks.tasks.TaskManager;
+import com.whiletrue.ct4j.instanceid.ClusterInstance;
+import com.whiletrue.ct4j.tasks.BasicTaskInfo;
+import com.whiletrue.ct4j.tasks.StdTaskRunner;
+import com.whiletrue.ct4j.tasks.TaskCallbacksListener;
+import com.whiletrue.ct4j.tasks.TaskManager;
 import com.whiletrue.sample.tasks.EmptyTask;
 import com.whiletrue.sample.tasks.FailingTask;
 import com.whiletrue.sample.tasks.GetUrlTask;

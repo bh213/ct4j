@@ -21,8 +21,8 @@ repositories {
 
 dependencies {
     implementation "org.springframework.boot:spring-boot-starter-web"
-    implementation project(":cluster-tasks")
-    implementation project(":cluster-tasks-spring-boot")
+    implementation project(":ct4j")
+    implementation project(":ct4j-spring-boot")
 
 
 }

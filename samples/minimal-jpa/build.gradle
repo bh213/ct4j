@@ -23,8 +23,8 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-web"
     implementation "org.springframework.boot:spring-boot-starter-data-jpa"
 
-    implementation project(":cluster-tasks")
-    implementation project(":cluster-tasks-spring-boot")
+    implementation project(":ct4j")
+    implementation project(":ct4j-spring-boot")
     runtimeOnly "org.hsqldb:hsqldb"
 
 }

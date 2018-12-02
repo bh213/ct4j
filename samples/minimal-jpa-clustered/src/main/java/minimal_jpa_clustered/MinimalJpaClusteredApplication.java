@@ -1,7 +1,7 @@
 package minimal_jpa_clustered;
 
-import com.whiletrue.clustertasks.spring.EnableCt4j;
-import com.whiletrue.clustertasks.tasks.TaskManager;
+import com.whiletrue.ct4j.spring.EnableCt4j;
+import com.whiletrue.ct4j.tasks.TaskManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

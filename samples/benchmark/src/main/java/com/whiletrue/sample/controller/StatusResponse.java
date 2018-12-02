@@ -1,7 +1,7 @@
 package com.whiletrue.sample.controller;
 
-import com.whiletrue.clustertasks.scheduler.ExecutionStats;
-import com.whiletrue.clustertasks.tasks.ResourceUsage;
+import com.whiletrue.ct4j.scheduler.ExecutionStats;
+import com.whiletrue.ct4j.tasks.ResourceUsage;
 
 import java.util.Map;
 

@@ -1,8 +1,8 @@
 package minimal_jpa_clustered;
 
-import com.whiletrue.clustertasks.tasks.ClusterTask;
-import com.whiletrue.clustertasks.tasks.Task;
-import com.whiletrue.clustertasks.tasks.TaskExecutionContext;
+import com.whiletrue.ct4j.tasks.ClusterTask;
+import com.whiletrue.ct4j.tasks.Task;
+import com.whiletrue.ct4j.tasks.TaskExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,6 +1,6 @@
 package com.whiletrue.sample;
 
-import com.whiletrue.clustertasks.spring.EnableCt4j;
+import com.whiletrue.ct4j.spring.EnableCt4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;

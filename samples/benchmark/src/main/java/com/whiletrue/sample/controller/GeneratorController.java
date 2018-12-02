@@ -1,9 +1,9 @@
 package com.whiletrue.sample.controller;
 
-import com.whiletrue.clustertasks.instanceid.ClusterInstance;
-import com.whiletrue.clustertasks.scheduler.ExecutionStats;
-import com.whiletrue.clustertasks.tasks.ResourceUsage;
-import com.whiletrue.clustertasks.tasks.TaskManager;
+import com.whiletrue.ct4j.instanceid.ClusterInstance;
+import com.whiletrue.ct4j.scheduler.ExecutionStats;
+import com.whiletrue.ct4j.tasks.ResourceUsage;
+import com.whiletrue.ct4j.tasks.TaskManager;
 import com.whiletrue.sample.BenchmarkConfigurationProperties;
 import com.whiletrue.sample.tasks.*;
 import org.slf4j.Logger;
