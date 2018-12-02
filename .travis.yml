@@ -27,7 +27,8 @@ before_install:
 # deploy master to maven central snapshot
 deploy:
   provider: script
-  script: "./gradlew build uploadArchives"
+  script: "./gradlew uploadArchives"
+  skip_cleanup: true
   on:
     branch: master
     condition: $TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false
