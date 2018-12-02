@@ -32,5 +32,5 @@ deploy:
     script: "./gradlew uploadArchives closeAndReleaseRepository -i"
     skip_cleanup: true
     on:
-      branch: "/^release.*$/"
-      condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false"
+      all_branches: true
+      condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false && $TRAVIS_BRANCH =~ ^release.*"

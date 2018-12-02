@@ -1,4 +1,2 @@
 enableFeaturePreview('STABLE_PUBLISHING')
 include 'ct4j', 'ct4j-spring-boot', 'samples/benchmark', 'samples/minimal', 'samples/minimal-jpa', 'samples/minimal-jpa-clustered'
-
-

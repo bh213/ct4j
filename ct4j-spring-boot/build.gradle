@@ -61,11 +61,3 @@ test {
     }
     failFast = true
 }
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}

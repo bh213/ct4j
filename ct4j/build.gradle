@@ -25,9 +25,6 @@ dependencies {
     testRuntime group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
 }
 
-
-description="Cluster tasks for java library - core"
-
 test {
     useJUnitPlatform {
         includeEngines 'junit-jupiter'
@@ -36,11 +33,4 @@ test {
     failFast = true
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}
 
