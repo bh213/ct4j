@@ -1,9 +1,13 @@
 buildscript {
     repositories {
         mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.12.0"
+        classpath "de.marcphilipp.gradle:nexus-publish-plugin:0.1.1"
     }
 }
 
@@ -49,6 +53,8 @@ wrapper {
 
          apply plugin: 'maven-publish'
          apply plugin: 'maven'
+         apply plugin: "java-library"
+         apply plugin: "de.marcphilipp.nexus-publish"
 
          if (System.getenv('SONATYPE_USERNAME')) {
 
@@ -59,6 +65,12 @@ wrapper {
             def gpgKeyLocation = System.getenv('GPG_KEY_LOCATION')
             def sonaTypeUsername = System.getenv('SONATYPE_USERNAME')
             def sonaTypepassword = System.getenv('SONATYPE_PASSWORD')
+
+
+             nexusPublishing {
+                 username = sonaTypeUsername
+                 password = sonaTypepassword
+             }
 
 
             uploadArchives.enabled = true
