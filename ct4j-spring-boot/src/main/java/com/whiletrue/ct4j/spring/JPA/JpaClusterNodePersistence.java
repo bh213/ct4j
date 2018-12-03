@@ -65,6 +65,7 @@ public class JpaClusterNodePersistence implements ClusterNodePersistence {
         long deleted = clusterInstanceRepository.deleteByUniqueRequestId(uniqueRequestId);
         if (deleted == 1) log.info("Instance {} checkout successful", clusterInstanceNaming.getInstanceId());
         else log.warn("Instance {} checkout failure. Deleted: {}", clusterInstanceNaming.getInstanceId(), deleted);
+        clusterInstanceRepository.flush();
     }
 
 

@@ -6,16 +6,21 @@ import javax.persistence.*;
 import java.time.Instant;
 import java.util.Date;
 
+import static com.whiletrue.ct4j.instanceid.ClusterInstanceNaming.INSTANCE_ID_LENGTH;
+
 @Entity()
 @Table(name = "ct4j_instances")
 
 public class ClusterInstanceEntity {
+
+
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ct4j_instances_seq")
     @SequenceGenerator(name = "ct4j_instances_seq", sequenceName = "ct4j_instances_seq", allocationSize = 1)
     private Long id;
 
-    @Column(nullable = false, length = 64)
+    @Column(nullable = false, length = INSTANCE_ID_LENGTH )
     private String instanceId;
 
     @Column(nullable = false, length = 64)

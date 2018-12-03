@@ -17,6 +17,7 @@ jdk:
 script:
 - "./gradlew build"
 - "./gradlew samples/minimal:bootRun"
+- "./gradlew samples/minimal-jpa:bootRun"
 before_install:
 - openssl aes-256-cbc -K $encrypted_f594690c56da_key -iv $encrypted_f594690c56da_iv
   -in $ENCRYPTED_GPG_KEY_LOCATION -out $GPG_KEY_LOCATION -d

@@ -18,6 +18,8 @@ subprojects {
     group = GROUP
     buildDir = "${project.rootDir}/build/ct4j/${project.name}"
     apply plugin: 'java'
+    apply plugin: 'idea'
+  
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
     uploadArchives.enabled = false

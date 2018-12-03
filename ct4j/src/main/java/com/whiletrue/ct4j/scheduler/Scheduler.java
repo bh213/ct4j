@@ -77,7 +77,7 @@ public class Scheduler implements InternalTaskEvents {
                 try {
                     waitingForPolling.await(nextPollingTimeInMilliseconds, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException ignored) {
-                    // ignore
+                    log.info("Scheduler thread interrupted");
                 } finally {
                     schedulerLock.unlock();
                 }
@@ -170,11 +170,11 @@ public class Scheduler implements InternalTaskEvents {
                         checkInLock.unlock();
                     }
                 } catch (InterruptedException e) {
-                    log.debug("check-in thread interrupted", e);
+                    log.info("check-in thread interrupted", e);
                 }
 
-            } catch (Exception e) {
-                log.error("Error in schedulerClusterHeartbeatThread", e);
+            } catch (Throwable t) {
+                log.error("Error in schedulerClusterHeartbeatThread", t);
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException ignored) {
@@ -183,7 +183,11 @@ public class Scheduler implements InternalTaskEvents {
             }
         }
 
-        clustered.instanceFinalCheckOut(currentUniqueRequestId);
+        try {
+            clustered.instanceFinalCheckOut(currentUniqueRequestId);
+        } catch (Exception e) {
+            log.error("instanceFinalCheckOut failure", e);
+        }
         log.info("Exiting check-in thread");
     }
 
@@ -304,12 +308,25 @@ public class Scheduler implements InternalTaskEvents {
     public synchronized void stopScheduling() {
         log.info("Stopping ct4j scheduling thread");
 
+        final long start = System.nanoTime();
+        long maxWaitTime = 3000; // TODO: Add to config, wait for tasks to finish first?
+
+
+
         // TODO: calculate max wait time
 
         boolean currentState = isSchedulerThreadRunning.getAndSet(false);
         if (!currentState) {
             log.error("ct4j scheduler already stopped");
             return;
+        }
+
+
+        checkInLock.lock();
+        try {
+            waitingForClusterCheckIn.signal();
+        } finally {
+            checkInLock.unlock();
         }
 
         schedulerLock.lock();
@@ -319,16 +336,11 @@ public class Scheduler implements InternalTaskEvents {
             schedulerLock.unlock();
         }
 
-        checkInLock.lock();
-        try {
-            waitingForClusterCheckIn.signal();
-        } finally {
-            checkInLock.unlock();
-        }
+
 
         if (schedulerThread != null) {
             try {
-                schedulerThread.join(500L); // TODO: Add to config, wait for tasks to finish first?
+                schedulerThread.join(maxWaitTime);
                 schedulerThread.interrupt();
             } catch (InterruptedException e) {
                 schedulerThread.interrupt();
@@ -337,9 +349,13 @@ public class Scheduler implements InternalTaskEvents {
         }
         schedulerThread = null;
 
+
+        maxWaitTime = Math.max(100, maxWaitTime - (start - System.nanoTime())/1000000);
+
+
         if (checkinThread != null) {
             try {
-                checkinThread.join(100L);
+                checkinThread.join(maxWaitTime );
                 checkinThread.interrupt();
             } catch (InterruptedException e) {
                 checkinThread.interrupt();
@@ -371,7 +387,7 @@ public class Scheduler implements InternalTaskEvents {
             checkinThread = new Thread(null, this::schedulerClusterHeartbeatThread, CLUSTER_TASKS_HEARTBEAT_THREAD);
             checkinThread.setPriority(Thread.MIN_PRIORITY); // TODO: higher priority? configurable?
             checkinThread.setUncaughtExceptionHandler((t, e) -> {
-                log.error("ct4j check-in thread caught uncaught exception", e);
+                log.error("ct4j check-in thread caught uncaught exception:", e);
                 // TODO: restart?
             });
             checkinThread.start();

@@ -22,6 +22,8 @@ public class NetworkClusterInstanceNaming implements ClusterInstanceNaming {
             log.error("Could not get hostname", e);
             instanceId = uuid;
         }
+
+        if (instanceId.length() > INSTANCE_ID_LENGTH) instanceId = instanceId.substring(0, INSTANCE_ID_LENGTH);
     }
 
     @Override
