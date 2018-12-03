@@ -21,6 +21,10 @@ cluster tasks for java (CT4j)
 
 Each task runs at exactly one node at the time. Retries can run at the same or different node. Tasks on failed node will be run by different node.
 
+##### Single node and in-memory support
+
+For testing or smaller services running on single node or with in-memory data store are also supported.
+
 
 ##### Retrying and error handling
 
@@ -30,13 +34,17 @@ Task can declare retry behavior or implement logic to decide whether to retry or
 ##### Task workflows
 
 Task can spawn next task in workflow on failure or success.
+
+##### Recurring tasks
+
+Tasks can be configured to run periodically (e.g. every 10 seconds) with guaranteed execution on single cluster node only.
  
 
 ##### Spring boot support
 
 Uses JPA for database access and cluster support
 
-Tasks can be beans and can dependency injection (e.g. `@Autowired`)   
+Tasks can be beans and can participate in dependency injection (with `@Autowired`)   
 
 ##### Designed for millions of tasks
 

@@ -21,6 +21,18 @@ before_install:
 - openssl aes-256-cbc -K $encrypted_f594690c56da_key -iv $encrypted_f594690c56da_iv
   -in $ENCRYPTED_GPG_KEY_LOCATION -out $GPG_KEY_LOCATION -d
 deploy:
+  - provider: releases
+    api_key:
+      secure: FUp2wRDQueFR7tP4shvbJ24P81vzm5pyVJnMZ2JeUQDh+lbgQ+4lKb4ZQuulmDSARAoacUMZQN+bEAQ3y4K2TEFerh0lwXS8bTugIjZDnjKqfVzvOk75TEobEr8jkXO390pR5a4aC4pL42VANLeHyJHn9C/hfSG0Em2R0SnoJjv0BECtyzZmijsfdiTqNZW6o8V0OwE+/FZ0TnoxPhv4T4yVxKOiMLbshQ3J0pVuNbvLki82icZWcdXpj/d0xiVzGwy8ApP3UVKpnwdcPf1MT2//+5SEoY9kzkiPYnb8ACzQP5j+yPYSEl5ssoRBJ1guidD4qKjbmjNFtxd+yWKOh19yI5ijSs5N3kKcHppbdj4Rkv00XxE9w2BJNhFSFikmcXfMkrQLqTpTB2wAqbOmU1jEkchHErznCBeP0YmTB27oWeH3FVUw3KEyw6Rvdpc51IRZ8ph5NlU6y3xH9mjqPHEmGfKeBn/ZCE99Zpo68s5Ph1rvct1ou0QMCQbUWxZG30o+wWuXtrwyzy9/kpXm/ro3PoHDUAabM7/k6zgit+0T19RqDU9d+H3kYX6N8c9jRoUa36vNuk+waU1OF3I2GgiWqdAoxqhei4TCJVOu+lhZqycwLssswl/FKHr2Z+99G+lOBFseqDnLCqYhgmdbsK8lh6SAVfe/PVHfS9+Wlak=
+    file_glob: true
+    file:
+      - ./build/ct4j/ct4j/*.jar
+      - ./build/ct4j/ct4j-spring-boot/*.jar
+    on:
+      repo: bh213/ct4j
+      all_branches: true
+      condition: "$TRAVIS_JDK_VERSION = openjdk11 && $TRAVIS_PULL_REQUEST = false && $TRAVIS_BRANCH =~ ^release.*"
+
   - provider: script
     script: "./gradlew publish -i"
     skip_cleanup: true
